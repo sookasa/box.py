@@ -1,5 +1,5 @@
-box.py - a Python client for Box's v2 api
------------------------------------------
+box.py - Python client for Box
+------------------------------
 
 [![Build Status](https://secure.travis-ci.org/sookasa/box.py.png?branch=master)](http://travis-ci.org/sookasa/box.py) [![Coverage Status](https://coveralls.io/repos/sookasa/box.py/badge.png)](https://coveralls.io/r/sookasa/box.py)
 
@@ -49,7 +49,7 @@ data = client.download_file('123456')
 ```
 
 Deleting a file
-----------------
+---------------
 ```python
 client.delete_file('123456')
 ```
@@ -64,8 +64,8 @@ metadata = client.copy_file('123456', new_filename='goodbye.txt')
 ```
 
 
-Receving & waiting for events
-------------------
+Receiving & waiting for events
+------------------------------
 ```python
 position = client.long_poll_for_events() # this will block until there are new events
 events = client.get_events(position)
