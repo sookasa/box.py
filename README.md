@@ -1,7 +1,7 @@
 box.py - a Python client for Box's v2 api
 -----------------------------------------
 
-[![Build Status](https://secure.travis-ci.org/sookasa/box.py.png?branch=master)](http://travis-ci.org/sookasa/box.py)
+[![Build Status](https://secure.travis-ci.org/sookasa/box.py.png?branch=master)](http://travis-ci.org/sookasa/box.py) [![Coverage Status](https://coveralls.io/repos/sookasa/box.py/badge.png)](https://coveralls.io/r/sookasa/box.py)
 
 
 Usage example:
