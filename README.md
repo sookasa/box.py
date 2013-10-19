@@ -26,7 +26,8 @@ Currently supported features
 
 Support
 -------
-- Python 2.7 (other versions not yet verified)
+- Python 2.7
+- PyPy
 
 
 Usage
