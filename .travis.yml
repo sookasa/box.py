@@ -8,7 +8,7 @@ install:
 
 # command to run tests
 script:
-  - python setup.py nosetests
+  - coverage run --source=box setup.py test
 
 after_success:
   coveralls
