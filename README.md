@@ -1,4 +1,4 @@
-box.py - a minimal Box library for python
+box.py - a Python client for Box's v2 api
 -----------------------------------------
 
 [![Build Status](https://secure.travis-ci.org/sookasa/box.py.png?branch=master)](http://travis-ci.org/sookasa/box.py)
