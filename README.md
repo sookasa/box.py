@@ -29,6 +29,11 @@ Support
 - Python 2.7
 - PyPy (dependent on lxml at this point for the authentication flow; see https://bitbucket.org/pypy/compatibility/wiki/lxml)
 
+Installation
+-------------
+```
+$ pip install box.py
+```
 
 Usage
 =====
