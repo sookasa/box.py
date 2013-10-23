@@ -5,9 +5,9 @@ For extended specs, see: http://developers.box.com/docs/
 
 from httplib import NOT_FOUND, PRECONDITION_FAILED, CONFLICT, UNAUTHORIZED
 import json
+from urllib import urlencode
 import urlparse
 import requests
-from lxml import objectify
 from os import path
 
 
@@ -34,10 +34,13 @@ class ShareAccess(object):
     COLLABORATORS = 'collaborators'
 
 
-def get_auth_url_v1(api_key):
+def start_authenticate_v1(api_key):
     """
     Returns a url to redirect the client to. Expires after 10 minutes.
+    Note that according to Box, this endpoint will cease to function after December 31st.
     """
+    from lxml import objectify
+
     r = requests.get('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=%s' % api_key)
     if not r.ok:
         raise BoxAuthenticationException(r.text)
@@ -48,8 +51,7 @@ def get_auth_url_v1(api_key):
 
     return 'https://www.box.com/api/1.0/auth/%s' % content.ticket
 
-
-def finish_authenticate(api_key, ticket):
+def finish_authenticate_v1(api_key, ticket):
     """
     Exchanges the ticket for an auth token. Should be called after the redirect completes.
     Returns a dictionary with the token and some additional user info
@@ -69,6 +71,7 @@ def finish_authenticate(api_key, ticket):
     }
 
     """
+    from lxml import objectify
     r = requests.get('https://www.box.com/api/1.0/rest', params={'action': 'get_auth_token',
                                                                  'api_key': api_key,
                                                                  'ticket': ticket})
@@ -84,12 +87,138 @@ def finish_authenticate(api_key, ticket):
         'user': {x.tag: x.pyval for x in content.user.iterchildren()}
     }
 
+def start_authenticate_v2(client_id, state=None, redirect_uri=None):
+    """
+    Returns a url to redirect the client to.
+
+    Args:
+        - client_id: The client_id you obtained in the initial setup.
+        - redirect_uri: An HTTPS URI or custom URL scheme where the response will be redirected.
+                        Optional if the redirect URI is registered with Box already.
+        - state: An arbitrary string of your choosing that will be included in the response to your application
+
+    Returns:
+        - a url to redirect to user to.
+    """
+    args = {
+        'response_type': 'code',
+        'client_id': client_id,
+    }
+
+    if state:
+        args['state'] = state
+
+    if redirect_uri:
+        args['redirect_url'] = redirect_uri
+
+    return 'https://www.box.com/api/oauth2/authorize?' + urlencode(args)
+
+def finish_authenticate_v2(client_id, client_secret, code):
+    """
+    finishes the authentication flow. See http://developers.box.com/oauth/ for details.
+
+    Args:
+        - client_id: The client_id you obtained in the initial setup.
+        - client_secret: The client_secret you obtained in the initial setup.
+        - code: a string containing the code, or a dictionary containing the GET query
+
+    Returns:
+        - a dictionary with the token and additional info
+
+    Example output:
+    { 'access_token': 'T9cE5asGnuyYCCqIZFoWjFHvNbvVqHjl',
+      'expires_in': 3600,
+      'restricted_to': [],
+      'token_type': 'bearer',
+      'refresh_token': 'J7rxTiWOHMoSC1isKZKBZWizoRXjkQzig5C6jFgCVJ9bUnsUfGMinKBDLZWP9BgR',
+    }
+
+    """
+
+    if isinstance(code, dict):
+        _handle_response_error(code)
+        code = code['code']
+
+    return _oauth2_token_request(client_id, client_secret, 'authorization_code', code=code)
+
+
+
+def refresh_v2_token(client_id, client_secret, refresh_token):
+    """
+    Returns a new access_token & refresh_token from an existing refresh_token
+
+    Each access_token is valid for 1 hour. In order to get a new, valid token, you can use the accompanying
+    refresh_token. Each refresh token is valid for 14 days. Every time you get a new access_token by using a
+    refresh_token, we reset your timer for the 14 day period. This means that as long as your users use your
+    application once every 14 days, their login is valid forever.
+
+    Args:
+        - client_id: The client_id you obtained in the initial setup.
+        - client_secret: The client_secret you obtained in the initial setup.
+        - code: a string containing the code, or a dictionary containing the GET query
+
+    Returns:
+        - a dictionary with the token and additional info
+    """
+    return _oauth2_token_request(client_id, client_secret, 'refresh_token', refresh_token=refresh_token)
+
+def _oauth2_token_request(client_id, client_secret, grant_type, **kwargs):
+    """
+    Performs an oauth2 request against Box
+    """
+    args = {
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'grant_type': grant_type
+    }
+
+    args.update(kwargs)
+    response = requests.post('https://www.box.com/api/oauth2/token', args).json()
+    _handle_response_error(response)
+    return response
+
+def _handle_response_error(response):
+    if 'error' in response:
+        raise BoxAuthenticationException(message=response.get('error_description'), error=response['error'])
+
+class CredentialsV1(object):
+    """
+    v1 credentials
+    Args:
+        - api_key: Your Box api_key
+        - access_token: the user access token
+    """
+    def __init__(self, api_key, access_token):
+        self._api_key = api_key
+        self._access_token = access_token
+
+    @property
+    def headers(self):
+        return {'Authorization': 'BoxAuth api_key={}&auth_token={}'.format(self._api_key, self._access_token)}
+
+class CredentialsV2(object):
+    """
+    v2 credentials
+    Args:
+        - access_token: the user access token
+    """
+    def __init__(self, access_token):
+        self._access_token = access_token
+
+    @property
+    def headers(self):
+        return {'Authorization': 'Bearer {}'.format(self._access_token)}
 
 class BoxClient(object):
-    def __init__(self, api_key, token):
-        self._api_key = api_key
-        self._token = token
-        self._headers = {'Authorization': 'BoxAuth api_key=%s&auth_token=%s' % (self._api_key, self._token)}
+    def __init__(self, credentials):
+        """
+        Args:
+            - credentials: an access_token string, or an instance of CredentialsV1/CredentialsV2
+        """
+        if not hasattr(credentials, 'headers'):
+            credentials = CredentialsV2(credentials)
+
+        self._headers = credentials.headers
 
     def _handle_error(self, response, object_id=None):
         if response.ok:
@@ -106,7 +235,7 @@ class BoxClient(object):
         if not exception:
             exception = BoxClientException
 
-        raise exception(response.text, response.status_code, object_id)
+        raise exception(response.text, object_id)
 
     def _get(self, resource, query=None, **kwargs):
         return requests.get('https://api.box.com/2.0/' + resource, params=query, headers=self._headers, **kwargs)
@@ -396,7 +525,7 @@ class BoxClient(object):
         Returns:
             - a dictionary containing the various urls. Example:
             {
-                 "url": "https://www.box.com/s/rh935iit6ewrmw0unyul",
+                "url": "https://www.box.com/s/rh935iit6ewrmw0unyul",
                 "download_url": "https://www.box.com/shared/static/rh935iit6ewrmw0unyul.jpeg",
                 "vanity_url": null,
                 "is_password_enabled": false,
@@ -511,11 +640,11 @@ class BoxClient(object):
 
 
 class BoxClientException(Exception):
-    def __init__(self, message=None, status_code=None, object_id=None):
+    def __init__(self, message=None, object_id=None, **kwargs):
         super(BoxClientException, self).__init__(message)
         self.message = message
-        self.status_code = status_code
         self.object_id = object_id
+        self.__dict__.update(kwargs)
 
 
 class ItemAlreadyExists(BoxClientException):

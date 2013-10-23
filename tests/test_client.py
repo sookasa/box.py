@@ -3,7 +3,7 @@ from httplib import CONFLICT, NOT_FOUND, PRECONDITION_FAILED, UNAUTHORIZED
 import unittest
 from datetime import datetime
 import requests
-from box import BoxClient, ShareAccess, EventFilter, BoxClientException, ItemAlreadyExists, ItemDoesNotExist, PreconditionFailed, BoxAccountUnauthorized
+from box import BoxClient, ShareAccess, EventFilter, BoxClientException, ItemAlreadyExists, ItemDoesNotExist, PreconditionFailed, BoxAccountUnauthorized, CredentialsV2, CredentialsV1
 from flexmock import flexmock
 from tests import FileObjMatcher, UTC, CallableMatcher
 import json
@@ -13,7 +13,7 @@ class TestClient(unittest.TestCase):
         """
         Makes a new test client
         """
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
         flexmock(client) \
             .should_receive('_handle_error') \
             .once()
@@ -23,9 +23,22 @@ class TestClient(unittest.TestCase):
     def make_response(self, content={}):
         return flexmock(ok=True, json=lambda: content)
 
-    def test_headers(self):
-        client = BoxClient('my_key', 'my_token')
-        self.assertDictEqual(client._headers, {"Authorization": "BoxAuth api_key=my_key&auth_token=my_token"})
+    def test_init_with_string(self):
+        flexmock(CredentialsV2)\
+            .should_receive('__init__')\
+            .with_args('my_token')\
+            .once()
+
+        flexmock(CredentialsV2)\
+            .should_receive('headers')\
+            .and_return({'Authorization': 'peanuts'})\
+
+        client = BoxClient('my_token')
+        self.assertDictEqual(client._headers, {'Authorization': 'peanuts'})
+
+    def test_init_with_credentials_class(self):
+        client = BoxClient(flexmock(headers={'hello': 'world'}))
+        self.assertDictEqual(client._headers, {'hello': 'world'})
 
     def test_get_id(self):
         self.assertEqual('123', BoxClient._get_id(123))
@@ -38,7 +51,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual({'id': 1}, BoxClient._get_file_metadata_from_response(flexmock(json=lambda: data)))
 
     def test_handle_error(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
 
         self.assertIsNone(client._handle_error(flexmock(ok=True)))
 
@@ -62,10 +75,9 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(BoxClientException) as expected_exception:
             client._handle_error(flexmock(ok=False, status_code=599, text='something terrible'))
         self.assertEqual('something terrible', expected_exception.exception.message)
-        self.assertEqual(599, expected_exception.exception.status_code)
 
     def test_get(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
         expected_response = self.make_response()
         flexmock(requests) \
             .should_receive('get') \
@@ -77,7 +89,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(expected_response, actual_response)
 
     def test_post_dict(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
 
         expected_data = {'arg': 'value'}
         expected_response = self.make_response()
@@ -94,7 +106,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(expected_response, actual_response)
 
     def test_post_data(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
 
         expected_data = 'mooooo'
         expected_response = self.make_response()
@@ -111,7 +123,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(expected_response, actual_response)
 
     def test_put_dict(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
 
         expected_data = {'arg': 'value'}
         expected_response = self.make_response()
@@ -128,7 +140,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(expected_response, actual_response)
 
     def test_put_data(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
 
         expected_data = 'mooooo'
         expected_response = self.make_response()
@@ -145,7 +157,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(expected_response, actual_response)
 
     def test_delete(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
         expected_headers = dict(client._headers)
         custom_headers = {'hello': 'world'}
         expected_headers.update(custom_headers)
@@ -166,7 +178,7 @@ class TestClient(unittest.TestCase):
         self.assertDictEqual(custom_headers, {'hello': 'world'})
 
     def test_delete_no_headers(self):
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
         expected_headers = dict(client._headers)
 
         expected_response = self.make_response()
@@ -255,7 +267,7 @@ class TestClient(unittest.TestCase):
 
     def test_get_folder_iterator(self):
         # setup a regular client without expecting the usual calls
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
         flexmock(client) \
             .should_receive('get_folder_content') \
             .with_args(666, count=1000) \
@@ -272,7 +284,7 @@ class TestClient(unittest.TestCase):
 
     def test_get_folder_iterator_zero_content(self):
         # setup a regular client without expecting the usual calls
-        client = BoxClient('my_key', 'my_token')
+        client = BoxClient('my_token')
         flexmock(client) \
             .should_receive('get_folder_content') \
             .with_args(666, count=1000) \
@@ -599,7 +611,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual('/hello.jpg', BoxClient.get_path_of_file(metadata))
 
     def test_get_long_poll_data(self):
-        client = BoxClient('my_api_key', 'my_token')
+        client = BoxClient('my_token')
 
         expected_response = {
             'type': 'realtime_server',
@@ -626,7 +638,7 @@ class TestClient(unittest.TestCase):
     def test_long_poll_for_latest_events(self):
 
         for stream_position in ['now', None]:
-            client = BoxClient('my_api_key', 'my_token')
+            client = BoxClient('my_token')
 
             longpoll_response = {
                 'type': 'realtime_server',
@@ -665,7 +677,7 @@ class TestClient(unittest.TestCase):
             self.assertEqual('some_stream_position', position)
 
     def test_long_poll_for_events_ok(self):
-        client = BoxClient('my_api_key', 'my_token')
+        client = BoxClient('my_token')
 
         longpoll_response = {
             'type': 'realtime_server',
@@ -696,7 +708,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual('some_stream_position', position)
 
     def test_long_poll_for_events_multiple_tries(self):
-        client = BoxClient('my_api_key', 'my_token')
+        client = BoxClient('my_token')
 
         longpoll_response = {
             'type': 'realtime_server',
@@ -735,7 +747,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual('some_stream_position', position)
 
     def test_long_poll_for_events_and_errors(self):
-        client = BoxClient('my_api_key', 'my_token')
+        client = BoxClient('my_token')
 
         longpoll_response = {
             'type': 'realtime_server',
@@ -767,7 +779,6 @@ class TestClient(unittest.TestCase):
             client.long_poll_for_events('some_stream_position', stream_type=EventFilter.CHANGES)
 
         self.assertEqual('some error', expect_exception.exception.message)
-        self.assertEqual(400, expect_exception.exception.status_code)
 
 
 if __name__ == '__main__':
