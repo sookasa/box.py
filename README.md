@@ -82,10 +82,14 @@ Authenticating a user (v2)
 ```python
 from box import start_authenticate_v2, finish_authenticate_v2
 url = start_authenticate_v2('my_api_key')
+>>> url
+'https://www.box.com/api/oauth2/authorize?response_type=code&client_id=my_api_key'
+```
 
-# redirect the user to url.
-# Once he accepts, a redirect will be issued to the page defined in your developer settings.
-# The "code" is passed as a GET argument
+Next, redirect the user to url.  
+Once he accepts, a redirect will be issued to the page defined in your developer settings. The "code" is passed as a GET argument.
+
+```python
 response = finish_authenticate_v1('my_client_id', 'my_client_secret' request.REQUEST['code'])
 >>> response
 { 'access_token': '1111111111111111',
@@ -119,10 +123,14 @@ Authenticating a user (v1)
 ```python
 from box import start_authenticate_v1, finish_authenticate_v1
 url = start_authenticate_v1('my_api_key')
+>>> url
+'https://www.box.com/api/1.0/auth/q00rxhq15wdemqdwxxxxxxxxxxxxxxxx'
+```
 
-# redirect the user to url.
-# Once he accepts, a redirect will be issued to the page defined in your developer settings.
-# The "ticket" is passed as a GET argument
+Redirect the user to url.  
+Once he accepts, a redirect will be issued to the page defined in your developer settings. The "ticket" is passed as a GET argument.
+
+```python
 response = finish_authenticate_v1('my_api_key', request.REQUEST['ticket'])
 >>> response
 {   'token': 'xbfe79wdedb5mxxxxxxxxxxxxxxxxxxx',
