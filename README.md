@@ -9,7 +9,7 @@ Usage example:
 from box import BoxClient
 from StringIO import StringIO
 
-client = BoxClient('my_api_key', 'user_token')
+client = BoxClient('user_token')
 client.upload_file('hello.txt', StringIO('hello world'))
 ```
 
@@ -77,16 +77,53 @@ position = client.long_poll_for_events() # this will block until there are new e
 events = client.get_events(position)
 ```
 
-Authenticating a user
----------------------
+Authenticating a user (v2)
+--------------------------
 ```python
-from box import get_auth_url_v1, box_authentication_done
-url = get_auth_url_v1('my_api_key')
+from box import start_authenticate_v2, finish_authenticate_v2
+url = start_authenticate_v2('my_api_key')
+
+# redirect the user to url.
+# Once he accepts, a redirect will be issued to the page defined in your developer settings.
+# The "code" is passed as a GET argument
+response = finish_authenticate_v1('my_client_id', 'my_client_secret' request.REQUEST['code'])
+>>> response
+{ 'access_token': '1111111111111111',
+  'restricted_to': [],
+  'token_type': 'bearer',
+  'expires_in': 4056,
+  'refresh_token': '999998988888877766665555444433332221111'
+}
+
+
+client = BoxClient(response['access_token'])
+```
+
+You will need to refresh the token (according to the "expires_in" field) on occassion:
+```python
+from box import refresh_v2_token
+response = refresh_v2_token('my_client_id', 'my_client_secret', 'my_refresh_token')
+>>> response
+{ 'access_token': '2222222222222222',
+  'restricted_to': [],
+  'token_type': 'bearer',
+  'expires_in': 4056,
+  'refresh_token': '7777777777777777'
+}
+```
+
+Authenticating a user (v1)
+--------------------------
+**NOTE**: According to Box, this API will be retired at December 31, 2013.
+
+```python
+from box import start_authenticate_v1, finish_authenticate_v1
+url = start_authenticate_v1('my_api_key')
 
 # redirect the user to url.
 # Once he accepts, a redirect will be issued to the page defined in your developer settings.
 # The "ticket" is passed as a GET argument
-response = finish_authenticate('my_api_key', request.REQUEST['ticket'])
+response = finish_authenticate_v1('my_api_key', request.REQUEST['ticket'])
 >>> response
 {   'token': 'xbfe79wdedb5mxxxxxxxxxxxxxxxxxxx',
     'user': {
@@ -100,4 +137,6 @@ response = finish_authenticate('my_api_key', request.REQUEST['ticket'])
         'user_id': 987654321
     }
 }
+
+client = BoxClient(CredentialsV1('my_api_key', response['token']))
 ```
