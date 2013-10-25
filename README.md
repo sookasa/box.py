@@ -116,35 +116,3 @@ response = refresh_v2_token('my_client_id', 'my_client_secret', 'my_refresh_toke
 }
 ```
 
-Authenticating a user (v1)
---------------------------
-**NOTE**: According to Box, this API will be retired at December 31, 2013.
-
-```python
-from box import start_authenticate_v1, finish_authenticate_v1
-url = start_authenticate_v1('my_api_key')
->>> url
-'https://www.box.com/api/1.0/auth/q00rxhq15wdemqdwxxxxxxxxxxxxxxxx'
-```
-
-Redirect the user to url.  
-Once he accepts, a redirect will be issued to the page defined in your developer settings. The "ticket" is passed as a GET argument.
-
-```python
-response = finish_authenticate_v1('my_api_key', request.REQUEST['ticket'])
->>> response
-{   'token': 'xbfe79wdedb5mxxxxxxxxxxxxxxxxxxx',
-    'user': {
-        'access_id': 123456789,
-        'email': 'someuser@sookasa.com',
-        'login': 'someuser@sookasa.com',
-        'max_upload_size': 2147483648,
-        'sharing_disabled': u'',
-        'space_amount': 5368709120,
-        'space_used': 2445159,
-        'user_id': 987654321
-    }
-}
-
-client = BoxClient(CredentialsV1('my_api_key', response['token']))
-```
