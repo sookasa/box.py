@@ -90,7 +90,7 @@ Next, redirect the user to url.
 Once he accepts, a redirect will be issued to the page defined in your developer settings. The "code" is passed as a GET argument.
 
 ```python
-response = finish_authenticate_v1('my_client_id', 'my_client_secret' request.REQUEST['code'])
+response = finish_authenticate_v2('my_client_id', 'my_client_secret', request.REQUEST['code'])
 >>> response
 { 'access_token': '1111111111111111',
   'restricted_to': [],
