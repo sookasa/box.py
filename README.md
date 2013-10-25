@@ -77,7 +77,7 @@ position = client.long_poll_for_events() # this will block until there are new e
 events = client.get_events(position)
 ```
 
-Authenticating a user (v2)
+Authenticating a user
 --------------------------
 ```python
 from box import start_authenticate_v2, finish_authenticate_v2
