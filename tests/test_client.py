@@ -242,11 +242,11 @@ class TestClient(unittest.TestCase):
         response = self.make_response()
         flexmock(client) \
             .should_receive('_get') \
-            .with_args('users/', query={'count': 123, 'offset': 456}) \
+            .with_args('users/', query={'limit': 123, 'offset': 456}) \
             .and_return(response) \
             .once()
 
-        client.get_user_list(count=123, offset=456)
+        client.get_user_list(limit=123, offset=456)
 
     def test_get_folder(self):
         client = self.make_client()
@@ -254,18 +254,18 @@ class TestClient(unittest.TestCase):
         response = self.make_response()
         flexmock(client) \
             .should_receive('_get') \
-            .with_args('folders/666', query={'count': 123, 'offset': 456}) \
+            .with_args('folders/666', query={'limit': 123, 'offset': 456}) \
             .and_return(response) \
             .once()
-        client.get_folder(folder_id=666, count=123, offset=456)
+        client.get_folder(folder_id=666, limit=123, offset=456)
 
         client = self.make_client()
         flexmock(client) \
             .should_receive('_get') \
-            .with_args('folders/666', query={'count': 123, 'offset': 456, 'fields': ['hello']}) \
+            .with_args('folders/666', query={'limit': 123, 'offset': 456, 'fields': ['hello']}) \
             .and_return(response) \
             .once()
-        client.get_folder(folder_id=666, count=123, offset=456, fields=['hello'])
+        client.get_folder(folder_id=666, limit=123, offset=456, fields=['hello'])
 
     def test_get_folder_content(self):
         client = self.make_client()
@@ -273,19 +273,19 @@ class TestClient(unittest.TestCase):
         response = self.make_response()
         flexmock(client) \
             .should_receive('_get') \
-            .with_args('folders/666/items', query={'count': 123, 'offset': 456}) \
+            .with_args('folders/666/items', query={'limit': 123, 'offset': 456}) \
             .and_return(response) \
             .once()
-        client.get_folder_content(folder_id=666, count=123, offset=456)
+        client.get_folder_content(folder_id=666, limit=123, offset=456)
 
         client = self.make_client()
         flexmock(client) \
             .should_receive('_get') \
-            .with_args('folders/666/items', query={'count': 123, 'offset': 456, 'fields': ['hello']}) \
+            .with_args('folders/666/items', query={'limit': 123, 'offset': 456, 'fields': ['hello']}) \
             .and_return(response) \
             .once()
 
-        client.get_folder_content(folder_id=666, count=123, offset=456, fields=['hello'])
+        client.get_folder_content(folder_id=666, limit=123, offset=456, fields=['hello'])
 
 
     def test_get_folder_iterator(self):
@@ -293,13 +293,13 @@ class TestClient(unittest.TestCase):
         client = BoxClient('my_token')
         flexmock(client) \
             .should_receive('get_folder_content') \
-            .with_args(666, count=1000) \
+            .with_args(666, limit=1000) \
             .and_return({'entries': range(10)}) \
             .once()
 
         flexmock(client) \
             .should_receive('get_folder_content') \
-            .with_args(666, count=1000, offset=1000) \
+            .with_args(666, limit=1000, offset=1000) \
             .and_return({'entries': None}) \
             .once()
 
@@ -310,7 +310,7 @@ class TestClient(unittest.TestCase):
         client = BoxClient('my_token')
         flexmock(client) \
             .should_receive('get_folder_content') \
-            .with_args(666, count=1000) \
+            .with_args(666, limit=1000) \
             .and_return({'entries': None}) \
             .once()
 

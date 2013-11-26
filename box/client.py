@@ -300,17 +300,17 @@ class BoxClient(object):
 
         return response.json()
 
-    def get_user_list(self, count=100, offset=0):
+    def get_user_list(self, limit=100, offset=0):
         """
         Returns users in an enterprise.
 
         Args:
-            - count: number of users to return. (default=100, max=1000). Optional.
+            - limit: number of users to return. (default=100, max=1000). Optional.
             - offset: The record at which to start. Optional.
         """
 
         params = {
-            'count': count,
+            'limit': limit,
             'offset': offset,
         }
 
@@ -319,18 +319,18 @@ class BoxClient(object):
 
         return response.json()
 
-    def get_folder(self, folder_id, count=100, offset=0, fields=None):
+    def get_folder(self, folder_id, limit=100, offset=0, fields=None):
         """
         Retrieves the metadata of a folder and child directory/files.
 
         Args:
-            - count: (optional) number of items to return. (default=100, max=1000).
+            - limit: (optional) number of items to return. (default=100, max=1000).
             - offset: (optional) The record at which to start
             - fields: (optional) Attribute(s) to include in the response
         """
 
         params = {
-            'count': count,
+            'limit': limit,
             'offset': offset,
         }
 
@@ -342,18 +342,18 @@ class BoxClient(object):
 
         return response.json()
 
-    def get_folder_content(self, folder_id, count=100, offset=0, fields=None):
+    def get_folder_content(self, folder_id, limit=100, offset=0, fields=None):
         """
         Retrieves the files and/or folders contained within this folder without any other metadata about the folder.
 
         Args:
-            - count: (optional) number of items to return. (default=100, max=1000).
+            - limit: (optional) number of items to return. (default=100, max=1000).
             - offset: (optional) The record at which to start
             - fields: (optional) Attribute(s) to include in the response
         """
 
         params = {
-            'count': count,
+            'limit': limit,
             'offset': offset,
         }
 
@@ -372,14 +372,14 @@ class BoxClient(object):
         """
 
         batch_size = 1000
-        content = self.get_folder_content(folder_id, count=batch_size)
+        content = self.get_folder_content(folder_id, limit=batch_size)
         offset = 0
         while content['entries']:
             for entry in content['entries']:
                 yield entry
 
             offset += batch_size
-            content = self.get_folder_content(folder_id, count=batch_size, offset=offset)
+            content = self.get_folder_content(folder_id, limit=batch_size, offset=offset)
 
     def create_folder(self, name, parent=0):
         """
