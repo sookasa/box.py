@@ -22,15 +22,6 @@ class FileObjMatcher(object):
 
         return result
 
-class CallableMatcher(object):
-    """
-    gets a function that performs the matching
-    """
-    def __init__(self, func):
-        self._func = func
-
-    def __eq__(self, other):
-        return self._func(other)
 
 from datetime import tzinfo, timedelta, datetime
 

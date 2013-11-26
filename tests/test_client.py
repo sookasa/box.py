@@ -1,12 +1,16 @@
 from StringIO import StringIO
-from httplib import CONFLICT, NOT_FOUND, PRECONDITION_FAILED, UNAUTHORIZED
-import unittest
 from datetime import datetime
-import requests
-from box import BoxClient, ShareAccess, EventFilter, BoxClientException, ItemAlreadyExists, ItemDoesNotExist, PreconditionFailed, BoxAccountUnauthorized, CredentialsV2, CredentialsV1
-from flexmock import flexmock
-from tests import FileObjMatcher, UTC, CallableMatcher
+from httplib import CONFLICT, NOT_FOUND, PRECONDITION_FAILED, UNAUTHORIZED
 import json
+from tests import FileObjMatcher, UTC
+import unittest
+
+from box import BoxClient, ShareAccess, EventFilter, BoxClientException, \
+    ItemAlreadyExists, ItemDoesNotExist, PreconditionFailed, BoxAccountUnauthorized, \
+    CredentialsV2
+from flexmock import flexmock
+import requests
+
 
 class TestClient(unittest.TestCase):
     def make_client(self):

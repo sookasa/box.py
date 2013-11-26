@@ -1,6 +1,6 @@
 from StringIO import StringIO
+from tests import FileObjMatcher
 import unittest
-from tests import FileObjMatcher, CallableMatcher
 
 
 class TestFileObjMatcher(unittest.TestCase):
@@ -18,20 +18,6 @@ class TestFileObjMatcher(unittest.TestCase):
         self.assertEqual(source_data.tell(), 1)
         self.assertEqual(other_data.tell(), 2)
 
-
-class TestCallableMatcher(unittest.TestCase):
-    def test_ok_callable(self):
-        self.assertTrue(CallableMatcher(lambda x: True).__eq__(None))
-
-    def test_false_callable(self):
-        self.assertFalse(CallableMatcher(lambda x: False).__eq__(None))
-
-    def test_raises(self):
-        with self.assertRaises(Exception):
-            self.assertFalse(CallableMatcher(lambda x: x.foo).__eq__(None))
-
-    def test_gets_arg(self):
-        self.assertEqual(12345, CallableMatcher(lambda x: x).__eq__(12345))
 
 if __name__ == '__main__':
     unittest.main()
