@@ -642,6 +642,27 @@ class BoxClient(object):
 
         return path.join(directory, file_metadata['name'])
 
+    def search(self, query, limit=30, offset=0):
+        """
+        The search endpoint provides a simple way of finding items that are accessible in a given user's Box account.
+
+        Args:
+            - query: The string to search for; can be matched against item names, descriptions, text content of a file, and other fields of the different item types.
+            - limit: (optional) number of items to return. (default=30, max=200).
+            - offset: (optional) The record at which to start
+        """
+
+        params = {
+            'query': query,
+            'limit': limit,
+            'offset': offset,
+        }
+
+        response = self._get('search', params)
+        self._handle_error(response)
+
+        return response.json()
+
 
 class BoxClientException(Exception):
     def __init__(self, status_code, message=None, object_id=None, **kwargs):

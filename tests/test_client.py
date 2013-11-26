@@ -821,6 +821,19 @@ class TestClient(unittest.TestCase):
         self.assertEqual(400, expect_exception.exception.status_code)
         self.assertEqual('some error', expect_exception.exception.message)
 
+    def test_search(self):
+        client = self.make_client()
+        expected_result = {"total_count": 4}
+        response = self.make_response(expected_result)
+
+        flexmock(client) \
+            .should_receive('_get') \
+            .with_args('search', query={'query': "foobar", 'limit': 123, 'offset': 456}) \
+            .and_return(response) \
+            .once()
+        result = client.search("foobar", limit=123, offset=456)
+        self.assertEqual(result, expected_result)
+
 
 if __name__ == '__main__':
     unittest.main()
