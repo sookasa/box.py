@@ -43,11 +43,11 @@ def start_authenticate_v1(api_key):
 
     r = requests.get('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=%s' % api_key)
     if not r.ok:
-        raise BoxAuthenticationException(r.text)
+        raise BoxAuthenticationException(r.status_code, r.text)
 
     content = objectify.fromstring(str(r.text))
     if content.status != 'get_ticket_ok':
-        raise BoxAuthenticationException(content.status.text)
+        raise BoxAuthenticationException(r.status_code, content.status.text)
 
     return 'https://www.box.com/api/1.0/auth/%s' % content.ticket
 
@@ -76,11 +76,11 @@ def finish_authenticate_v1(api_key, ticket):
                                                                  'api_key': api_key,
                                                                  'ticket': ticket})
     if not r.ok:
-        raise BoxAuthenticationException(r.text)
+        raise BoxAuthenticationException(r.status_code, r.text)
 
     content = objectify.fromstring(str(r.text))
     if content.status != 'get_auth_token_ok':
-        raise BoxAuthenticationException(content.status.text)
+        raise BoxAuthenticationException(r.status_code, content.status.text)
 
     return {
         'token': content.auth_token.text,
@@ -134,11 +134,6 @@ def finish_authenticate_v2(client_id, client_secret, code):
     }
 
     """
-
-    if isinstance(code, dict):
-        _handle_response_error(code)
-        code = code['code']
-
     return _oauth2_token_request(client_id, client_secret, 'authorization_code', code=code)
 
 
@@ -173,13 +168,11 @@ def _oauth2_token_request(client_id, client_secret, grant_type, **kwargs):
     }
 
     args.update(kwargs)
-    response = requests.post('https://www.box.com/api/oauth2/token', args).json()
-    _handle_response_error(response)
-    return response
-
-def _handle_response_error(response):
-    if 'error' in response:
-        raise BoxAuthenticationException(message=response.get('error_description'), error=response['error'])
+    response = requests.post('https://www.box.com/api/oauth2/token', args)
+    result = response.json()
+    if 'error' in result:
+        raise BoxAuthenticationException(response.status_code, message=result.get('error_description'), error=result['error'])
+    return result
 
 class CredentialsV1(object):
     """
@@ -233,6 +226,7 @@ class CredentialsV2(object):
 
 
 class BoxClient(object):
+
     def __init__(self, credentials):
         """
         Args:
@@ -253,15 +247,19 @@ class BoxClient(object):
         else:
             return response.json()
 
+    @property
+    def default_headers(self):
+        return self.credentials.headers
+
     def _request(self, method, resource, params=None, data=None, headers=None, try_refresh=True, endpoint="api", raw=False, **kwargs):
         if isinstance(data, dict):
             data = json.dumps(data)
 
         if headers:
             headers = dict(headers)
-            headers.update(self.credentials.headers)
+            headers.update(self.default_headers)
         else:
-            headers = self.credentials.headers
+            headers = self.default_headers
 
         url = 'https://%s.box.com/2.0/%s' % (endpoint, resource)
 
