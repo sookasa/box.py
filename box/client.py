@@ -239,7 +239,7 @@ class BoxClient(object):
             exception = EXCEPTION_MAP.get(response.status_code, BoxClientException)
             raise exception(response.status_code, response.text)
 
-        if response.status_code == 202:
+        if response.status_code in (202, 302):
             return response.headers["Location"]
 
         if raw:
@@ -464,7 +464,7 @@ class BoxClient(object):
         if max_width:
             query['max_width'] = max_width
 
-        return self._get('files/{}/thumbnail.{}'.format(file_id, extension), query=query)
+        return self._get('files/{}/thumbnail.{}'.format(file_id, extension), query=query, raw=True)
 
     def upload_file(self, filename, fileobj, parent=0):
         """
