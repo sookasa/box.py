@@ -426,16 +426,12 @@ class BoxClient(object):
         response = self._delete('files/{}'.format(file_id), headers)
         self._handle_error(response, file_id)
 
-        return response
-
     def delete_trashed_file(self, file_id):
         """
         Permanently deletes an item that is in the trash.
         """
         response = self._delete('files/{}/trash'.format(file_id))
         self._handle_error(response, file_id)
-
-        return response
 
     def download_file(self, file_id, version=None):
         """

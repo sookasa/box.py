@@ -375,16 +375,18 @@ class TestClient(unittest.TestCase):
             .and_return(response) \
             .once()
 
-        client.delete_file(123)
+        result = client.delete_file(123)
+        self.assertIsNone(result)
 
         client = self.make_client()
         flexmock(client) \
             .should_receive('_delete') \
             .with_args('files/123', {'If-Match': 'deadbeef'}) \
-            .and_return(response) \
+            .and_return(None) \
             .once()
 
-        client.delete_file(123, etag='deadbeef')
+        result = client.delete_file(123, etag='deadbeef')
+        self.assertIsNone(result)
 
     def test_delete_trashed_file(self):
         client = self.make_client()
@@ -396,7 +398,8 @@ class TestClient(unittest.TestCase):
             .and_return(response) \
             .once()
 
-        client.delete_trashed_file(123)
+        result = client.delete_trashed_file(123)
+        self.assertIsNone(result)
 
     def test_download_file(self):
         client = self.make_client()
