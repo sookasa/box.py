@@ -13,19 +13,37 @@ import requests
 
 
 class TestClient(unittest.TestCase):
-    def make_client(self):
+    def make_client(self, method, path, params=None, data=None, headers=None, endpoint="api", result=None, **kwargs):
         """
         Makes a new test client
         """
         client = BoxClient('my_token')
         flexmock(client) \
-            .should_receive('_handle_error') \
+            .should_receive('_process_response') \
+            .and_return(result) \
+            .once()
+
+        if headers:
+            headers = dict(headers)
+            headers.update(client.default_headers)
+        else:
+            headers = client.default_headers
+
+        flexmock(requests) \
+            .should_receive('request') \
+            .with_args(method,
+                       'https://%s.box.com/2.0/%s' % (endpoint, path),
+                       params=params,
+                       data=json.dumps(data) if isinstance(data, dict) else data,
+                       headers=headers,
+                       **kwargs) \
+            .and_return(self.make_response(result)) \
             .once()
 
         return client
 
-    def make_response(self, content={}):
-        return flexmock(ok=True, json=lambda: content)
+    def make_response(self, content=None):
+        return flexmock(ok=True, status_code=200, json=lambda: content)
 
     def test_init_with_string(self):
         flexmock(CredentialsV2)\
@@ -38,11 +56,11 @@ class TestClient(unittest.TestCase):
             .and_return({'Authorization': 'peanuts'})\
 
         client = BoxClient('my_token')
-        self.assertDictEqual(client._headers, {'Authorization': 'peanuts'})
+        self.assertDictEqual(client.default_headers, {'Authorization': 'peanuts'})
 
     def test_init_with_credentials_class(self):
         client = BoxClient(flexmock(headers={'hello': 'world'}))
-        self.assertDictEqual(client._headers, {'hello': 'world'})
+        self.assertDictEqual(client.default_headers, {'hello': 'world'})
 
     def test_get_id(self):
         self.assertEqual('123', BoxClient._get_id(123))
@@ -50,252 +68,108 @@ class TestClient(unittest.TestCase):
         self.assertEqual('123', BoxClient._get_id(123L))
         self.assertEqual('123', BoxClient._get_id({'id': 123}))
 
-    def test_get_file_metadata_from_response(self):
-        data = {'entries': [{'id': 1}, {'id': 2}]}
-        self.assertEqual({'id': 1}, BoxClient._get_file_metadata_from_response(flexmock(json=lambda: data)))
-
     def test_handle_error(self):
         client = BoxClient('my_token')
 
-        self.assertIsNone(client._handle_error(flexmock(ok=True)))
+        self.assertIsNone(client._process_response(self.make_response()))
 
         with self.assertRaises(ItemAlreadyExists) as expected_exception:
-            client._handle_error(flexmock(ok=False, status_code=CONFLICT, text='something terrible'))
+            client._process_response(flexmock(ok=False, status_code=CONFLICT, text='something terrible'))
         self.assertEqual(CONFLICT, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(ItemDoesNotExist) as expected_exception:
-            client._handle_error(flexmock(ok=False, status_code=NOT_FOUND, text='something terrible'))
+            client._process_response(flexmock(ok=False, status_code=NOT_FOUND, text='something terrible'))
         self.assertEqual(NOT_FOUND, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(PreconditionFailed) as expected_exception:
-            client._handle_error(flexmock(ok=False, status_code=PRECONDITION_FAILED, text='something terrible'))
+            client._process_response(flexmock(ok=False, status_code=PRECONDITION_FAILED, text='something terrible'))
         self.assertEqual(PRECONDITION_FAILED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(BoxAccountUnauthorized) as expected_exception:
-            client._handle_error(flexmock(ok=False, status_code=UNAUTHORIZED, text='something terrible'))
+            client._process_response(flexmock(ok=False, status_code=UNAUTHORIZED, text='something terrible'))
         self.assertEqual(UNAUTHORIZED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         # unknown code
         with self.assertRaises(BoxClientException) as expected_exception:
-            client._handle_error(flexmock(ok=False, status_code=599, text='something terrible'))
+            client._process_response(flexmock(ok=False, status_code=599, text='something terrible'))
         self.assertEqual(599, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
     def test_get(self):
-        client = BoxClient('my_token')
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('get',
-                       'https://api.box.com/2.0/foo',
-                       params={'arg': 'value'},
-                       data=None,
-                       headers=client._headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
-
-        actual_response = client._get('foo', {'arg': 'value'}, crap=1)
-        self.assertEqual(expected_response, actual_response)
+        client = self.make_client("get", "foo", params={'arg': 'value'}, crap=1)
+        client._get('foo', {'arg': 'value'}, crap=1)
 
     def test_post_dict(self):
-        client = BoxClient('my_token')
-
         expected_data = {'arg': 'value'}
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('post',
-                       'https://api.box.com/2.0/foo',
-                       params=None,
-                       data=json.dumps(expected_data),
-                       headers=client._headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
+        client = self.make_client("post", "foo", data=expected_data, crap=1)
 
         actual_response = client._post('foo', expected_data, crap=1)
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(None, actual_response)
 
     def test_post_data(self):
-        client = BoxClient('my_token')
-
-        expected_data = 'mooooo'
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('post',
-                       'https://api.box.com/2.0/foo',
-                       params=None,
-                       data=expected_data,
-                       headers=client._headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
-
+        expected_data = "mooooo"
+        client = self.make_client("post", "foo", data=expected_data, crap=1)
         actual_response = client._post('foo', expected_data, crap=1)
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(None, actual_response)
 
     def test_put_dict(self):
-        client = BoxClient('my_token')
-
         expected_data = {'arg': 'value'}
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('put',
-                       'https://api.box.com/2.0/foo',
-                       params=None,
-                       data=json.dumps(expected_data),
-                       headers=client._headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
-
+        client = self.make_client("put", "foo", data=expected_data, crap=1)
         actual_response = client._put('foo', expected_data, crap=1)
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(None, actual_response)
 
     def test_put_data(self):
-        client = BoxClient('my_token')
-
         expected_data = 'mooooo'
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('put',
-                       'https://api.box.com/2.0/foo',
-                       params=None,
-                       data=expected_data,
-                       headers=client._headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
-
+        client = self.make_client("put", "foo", data=expected_data, crap=1)
         actual_response = client._put('foo', expected_data, crap=1)
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(None, actual_response)
 
     def test_delete(self):
-        client = BoxClient('my_token')
-        expected_headers = dict(client._headers)
         custom_headers = {'hello': 'world'}
-        expected_headers.update(custom_headers)
 
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('delete',
-                       'https://api.box.com/2.0/foo',
-                       params=None,
-                       data=None,
-                       headers=expected_headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
-
+        client = self.make_client("delete", "foo", headers=custom_headers, crap=1)
         actual_response = client._delete('foo', headers=custom_headers, crap=1)
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(None, actual_response)
 
         # verify headers were not modified
         self.assertDictEqual(custom_headers, {'hello': 'world'})
 
     def test_delete_no_headers(self):
-        client = BoxClient('my_token')
-        expected_headers = dict(client._headers)
-
-        expected_response = self.make_response()
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('delete',
-                       'https://api.box.com/2.0/foo',
-                       params=None,
-                       data=None,
-                       headers=expected_headers,
-                       crap=1) \
-            .and_return(expected_response) \
-            .once()
-
+        client = self.make_client("delete", "foo", crap=1)
         actual_response = client._delete('foo', crap=1)
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(None, actual_response)
 
 
     def test_get_user_info(self):
-        client = self.make_client()
-        response = self.make_response({'name': 'bla'})
+        client = self.make_client("get", 'users/me', result={'name': 'bla'})
 
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('users/me') \
-            .and_return(response) \
-            .once()
+        result = client.get_user_info()
+        self.assertDictEqual(result, {'name': 'bla'})
 
-        self.assertDictEqual(client.get_user_info(), {'name': 'bla'})
-
-        client = self.make_client()
-        response = self.make_response()
-
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('users/john') \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", 'users/john')
         client.get_user_info('john')
 
     def test_get_user_list(self):
-        client = self.make_client()
-
-        response = self.make_response()
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('users/', query={'limit': 123, 'offset': 456}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", "users/", params={'limit': 123, 'offset': 456})
         client.get_user_list(limit=123, offset=456)
 
     def test_get_folder(self):
-        client = self.make_client()
-
-        response = self.make_response()
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('folders/666', query={'limit': 123, 'offset': 456}) \
-            .and_return(response) \
-            .once()
+        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456})
         client.get_folder(folder_id=666, limit=123, offset=456)
 
-        client = self.make_client()
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('folders/666', query={'limit': 123, 'offset': 456, 'fields': ['hello']}) \
-            .and_return(response) \
-            .once()
+        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456, 'fields': ['hello']})
         client.get_folder(folder_id=666, limit=123, offset=456, fields=['hello'])
 
     def test_get_folder_content(self):
-        client = self.make_client()
-
-        response = self.make_response()
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('folders/666/items', query={'limit': 123, 'offset': 456}) \
-            .and_return(response) \
-            .once()
+        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456})
         client.get_folder_content(folder_id=666, limit=123, offset=456)
 
-        client = self.make_client()
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('folders/666/items', query={'limit': 123, 'offset': 456, 'fields': ['hello']}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456, 'fields': ['hello']})
         client.get_folder_content(folder_id=666, limit=123, offset=456, fields=['hello'])
-
 
     def test_get_folder_iterator(self):
         # setup a regular client without expecting the usual calls
@@ -326,217 +200,87 @@ class TestClient(unittest.TestCase):
         self.assertListEqual(list(client.get_folder_iterator(666)), [])
 
     def test_create_folder_no_parent(self):
-        client = self.make_client()
         expected_dict = {
             'name': 'hello',
             'parent': {'id': '0'}
         }
         expected_result = {'entries': None}
-        response = self.make_response(expected_result)
-
-        flexmock(client) \
-            .should_receive('_post') \
-            .with_args('folders', expected_dict) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("post", "folders", data=expected_dict, result=expected_result)
         result = client.create_folder(name='hello')
         self.assertEqual(result, expected_result)
 
     def test_create_folder_with_parent(self):
-        client = self.make_client()
         expected_dict = {
             'name': 'hello',
             'parent': {'id': '123'}
         }
         expected_result = {'entries': None}
-        response = self.make_response(expected_result)
-
-        flexmock(client) \
-            .should_receive('_post') \
-            .with_args('folders', expected_dict) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("post", "folders", data=expected_dict, result=expected_result)
         result = client.create_folder(name='hello', parent=123)
         self.assertEqual(result, expected_result)
 
     def test_get_file_metadata(self):
-        client = self.make_client()
-
-        response = self.make_response()
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('files/123') \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", 'files/123')
         client.get_file_metadata(123)
 
 
     def test_delete_file(self):
-        client = self.make_client()
-
-        response = self.make_response()
-        flexmock(client) \
-            .should_receive('_delete') \
-            .with_args('files/123', {}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("delete", 'files/123')
         result = client.delete_file(123)
         self.assertIsNone(result)
 
-        client = self.make_client()
-        flexmock(client) \
-            .should_receive('_delete') \
-            .with_args('files/123', {'If-Match': 'deadbeef'}) \
-            .and_return(None) \
-            .once()
-
+        client = self.make_client("delete", 'files/123', headers={'If-Match': 'deadbeef'})
         result = client.delete_file(123, etag='deadbeef')
         self.assertIsNone(result)
 
     def test_delete_trashed_file(self):
-        client = self.make_client()
-
-        response = self.make_response()
-        flexmock(client) \
-            .should_receive('_delete') \
-            .with_args('files/123/trash') \
-            .and_return(response) \
-            .once()
+        client = self.make_client("delete", 'files/123/trash')
 
         result = client.delete_trashed_file(123)
         self.assertIsNone(result)
 
     def test_download_file(self):
-        client = self.make_client()
-
-        response = flexmock(ok=True, raw=StringIO('hello world'))
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('files/123/content', query={}, stream=True) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", "files/123/content", params={}, result=StringIO('hello world'), stream=True)
         downloaded_file = client.download_file(123)
         self.assertEqual('hello world', downloaded_file.read())
 
     def test_download_file_with_version(self):
-        client = self.make_client()
-
-        response = flexmock(ok=True, raw=StringIO('hello world'))
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('files/123/content', query={'version': 1000}, stream=True) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", "files/123/content", params={'version': 1000}, result=StringIO('hello world'), stream=True)
         downloaded_file = client.download_file(123, 1000)
         self.assertEqual('hello world', downloaded_file.read())
 
     def test_upload_file(self):
-        client = self.make_client()
-        response = self.make_response()
-        flexmock(requests) \
-            .should_receive('post') \
-            .with_args('https://upload.box.com/api/2.0/files/content',
-                       headers=client._headers,
-                       data={'parent_id': '666'},
-                       files={'hello.jpg': FileObjMatcher('hello world')}) \
-            .and_return(response) \
-            .once()
-
-        flexmock(client) \
-            .should_receive('_get_file_metadata_from_response') \
-            .with_args(response) \
-            .and_return({'id': '1'}) \
-            .once()
-
+        client = self.make_client("post", "files/content", endpoint="upload", data={'parent_id': '666'}, files={'hello.jpg': FileObjMatcher('hello world')},
+                                  result={"entries": [{"id": "1"}]})
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent=666)
         self.assertEqual({'id': '1'}, result)
 
     def test_upload_file_with_parent_as_dict(self):
-        client = self.make_client()
-        response = self.make_response()
-        flexmock(requests) \
-            .should_receive('post') \
-            .with_args('https://upload.box.com/api/2.0/files/content',
-                       headers=client._headers,
-                       data={'parent_id': '666'},
-                       files={'hello.jpg': FileObjMatcher('hello world')}) \
-            .and_return(response) \
-            .once()
-
-        flexmock(client) \
-            .should_receive('_get_file_metadata_from_response') \
-            .with_args(response) \
-            .and_return({'id': '1'}) \
-            .once()
-
+        client = self.make_client("post", "files/content", data={'parent_id': '666'},
+                                  files={'hello.jpg': FileObjMatcher('hello world')}, result={"entries": [{"id": "1"}]}, endpoint="upload")
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent={'id': 666})
         self.assertEqual({'id': '1'}, result)
 
     def test_overwrite_file(self):
-        client = self.make_client()
-        expected_headers = dict(client._headers)
-        expected_headers['content_modified_at'] = '2006-05-04T03:02:01+00:00'
-        expected_headers['If-Match'] = 'some_tag'
-        expected_response = self.make_response()
+        expected_headers = {'content_modified_at': '2006-05-04T03:02:01+00:00',
+                            'If-Match': 'some_tag'}
 
-        flexmock(requests) \
-            .should_receive('post') \
-            .with_args('https://upload.box.com/api/2.0/files/666/content',
-                       headers=expected_headers,
-                       files={'file': FileObjMatcher('hello world')}) \
-            .and_return(expected_response) \
-            .once()
-
-        flexmock(client) \
-            .should_receive('_get_file_metadata_from_response') \
-            .with_args(expected_response) \
-            .and_return({'id': '1'}) \
-            .once()
-
+        client = self.make_client("post", "files/666/content", headers=expected_headers, files={'file': FileObjMatcher('hello world')}, endpoint="upload", result={"entries": [{"id": "1"}]})
         result = client.overwrite_file(666, StringIO('hello world'), etag='some_tag',
                                        content_modified_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()))
-
         self.assertEqual({'id': '1'}, result)
 
 
     def test_copy_file(self):
-        expected_result = {'id': '1'}
-        response = self.make_response(expected_result)
-        client = self.make_client()
-
-        # same name, different parent
-        flexmock(client) \
-            .should_receive('_post') \
-            .with_args('files/123/copy', {'parent': {'id': '666'}}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("post", 'files/123/copy', data={'parent': {'id': '666'}}, result={'id': '1'})
         result = client.copy_file(123, 666)
-        self.assertEqual(expected_result, result)
+        self.assertEqual({'id': '1'}, result)
 
-        client = self.make_client()
-        # different name
-        flexmock(client) \
-            .should_receive('_post') \
-            .with_args('files/123/copy', {
-            'parent': {'id': '666'},
-            'name': 'goatse.cx'}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("post", 'files/123/copy', data={'parent': {'id': '666'}, 'name': 'goatse.cx'}, result={'id': '1'})
         result = client.copy_file(123, 666, 'goatse.cx')
-        self.assertEqual(expected_result, result)
+        self.assertEqual({'id': '1'}, result)
 
     def test_share_link(self):
-        response = self.make_response({'shared_link': 'http://www.foo.org/bla?x=y'})
-        client = self.make_client()
-
         # defaults
         args = {
             'permissions': {
@@ -546,17 +290,11 @@ class TestClient(unittest.TestCase):
             'access': 'open'
         }
 
-        flexmock(client) \
-            .should_receive('_put') \
-            .with_args('files/123', {'shared_link': args}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("put", "files/123", data={'shared_link': args}, result={'shared_link': 'http://www.foo.org/bla?x=y'})
         link = client.share_link(123)
         self.assertEqual('http://www.foo.org/bla?x=y', link)
 
         # with expiration time
-        client = self.make_client()
         args = {
             'permissions': {
                 'can_preview': False,
@@ -565,24 +303,14 @@ class TestClient(unittest.TestCase):
             'access': 'company',
             'unshared_at': '2006-05-04T03:02:01+00:00'
         }
-
-        flexmock(client) \
-            .should_receive('_put') \
-            .with_args('files/123', {'shared_link': args}) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("put", "files/123", data={'shared_link': args}, result={'shared_link': 'http://www.foo.org/bla?x=y'})
         link = client.share_link(123, access=ShareAccess.COMPANY,
                                  expire_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()),
                                  can_download=False,
                                  can_preview=False)
-
         self.assertEqual('http://www.foo.org/bla?x=y', link)
 
     def test_get_events(self):
-        response = self.make_response()
-        client = self.make_client()
-
         # defaults
         args = {
             'stream_position': '0',
@@ -590,28 +318,16 @@ class TestClient(unittest.TestCase):
             'limit': 1000
         }
 
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('events', args) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", "events", params=args)
         client.get_events()
 
         # custom arguments
-        client = self.make_client()
         args = {
             'stream_position': '123',
             'stream_type': 'changes',
             'limit': 9
         }
-
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('events', args) \
-            .and_return(response) \
-            .once()
-
+        client = self.make_client("get", "events", params=args)
         client.get_events(stream_position=123, stream_type=EventFilter.CHANGES, limit=9)
 
     def test_get_path_of_file(self):
@@ -671,8 +387,8 @@ class TestClient(unittest.TestCase):
         })
 
         flexmock(requests) \
-            .should_receive('options') \
-            .with_args('https://api.box.com/2.0/events', headers=client._headers) \
+            .should_receive('request') \
+            .with_args('options', 'https://api.box.com/2.0/events', headers=client.default_headers, data=None, params=None) \
             .and_return(response) \
             .once()
 
@@ -826,15 +542,8 @@ class TestClient(unittest.TestCase):
         self.assertEqual('some error', expect_exception.exception.message)
 
     def test_search(self):
-        client = self.make_client()
         expected_result = {"total_count": 4}
-        response = self.make_response(expected_result)
-
-        flexmock(client) \
-            .should_receive('_get') \
-            .with_args('search', query={'query': "foobar", 'limit': 123, 'offset': 456}) \
-            .and_return(response) \
-            .once()
+        client = self.make_client("get", "search", params={'query': "foobar", 'limit': 123, 'offset': 456}, result=expected_result)
         result = client.search("foobar", limit=123, offset=456)
         self.assertEqual(result, expected_result)
 
