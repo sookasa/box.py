@@ -389,6 +389,8 @@ class BoxClient(object):
         response = self._post('folders', args)
         self._handle_error(response)
 
+        return response.json()
+
     def get_file_metadata(self, file_id):
         """
         Fetches the metadata of the given file_id

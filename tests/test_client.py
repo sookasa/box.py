@@ -303,14 +303,17 @@ class TestClient(unittest.TestCase):
             'name': 'hello',
             'parent': {'id': '0'}
         }
+        expected_result = {'entries': None}
+        response = self.make_response(expected_result)
 
         flexmock(client) \
             .should_receive('_post') \
             .with_args('folders', expected_dict) \
-            .and_return({'entries': None}) \
+            .and_return(response) \
             .once()
 
-        client.create_folder(name='hello')
+        result = client.create_folder(name='hello')
+        self.assertEqual(result, expected_result)
 
     def test_create_folder_with_parent(self):
         client = self.make_client()
@@ -318,14 +321,17 @@ class TestClient(unittest.TestCase):
             'name': 'hello',
             'parent': {'id': '123'}
         }
+        expected_result = {'entries': None}
+        response = self.make_response(expected_result)
 
         flexmock(client) \
             .should_receive('_post') \
             .with_args('folders', expected_dict) \
-            .and_return({'entries': None}) \
+            .and_return(response) \
             .once()
 
-        client.create_folder(name='hello', parent=123)
+        result = client.create_folder(name='hello', parent=123)
+        self.assertEqual(result, expected_result)
 
     def test_get_file_metadata(self):
         client = self.make_client()
