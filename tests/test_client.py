@@ -475,7 +475,8 @@ class TestClient(unittest.TestCase):
 
 
     def test_copy_file(self):
-        response = self.make_response()
+        expected_result = {'id': '1'}
+        response = self.make_response(expected_result)
         client = self.make_client()
 
         # same name, different parent
@@ -485,7 +486,8 @@ class TestClient(unittest.TestCase):
             .and_return(response) \
             .once()
 
-        client.copy_file(123, 666)
+        result = client.copy_file(123, 666)
+        self.assertEqual(expected_result, result)
 
         client = self.make_client()
         # different name
@@ -497,7 +499,8 @@ class TestClient(unittest.TestCase):
             .and_return(response) \
             .once()
 
-        client.copy_file(123, 666, 'goatse.cx')
+        result = client.copy_file(123, 666, 'goatse.cx')
+        self.assertEqual(expected_result, result)
 
     def test_share_link(self):
         response = self.make_response({'shared_link': 'http://www.foo.org/bla?x=y'})

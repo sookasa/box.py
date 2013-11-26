@@ -494,6 +494,7 @@ class BoxClient(object):
     def copy_file(self, file_id, destination_parent, new_filename=None):
         """
         Copies a file
+        @see http://developers.box.com/docs/#files-copy-a-file
 
         Args:
             - file_id: the id of the file we want to copy
@@ -511,7 +512,7 @@ class BoxClient(object):
         response = self._post('files/{}/copy'.format(file_id), args)
         self._handle_error(response, file_id)
 
-        return response
+        return response.json()
 
     def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=True, can_preview=True):
         """
