@@ -242,6 +242,9 @@ class BoxClient(object):
             exception = EXCEPTION_MAP.get(response.status_code, BoxClientException)
             raise exception(response.status_code, response.text)
 
+        if response.status_code == 202:
+            return response.headers["Location"]
+
         if raw:
             return response.raw
         else:
@@ -438,6 +441,33 @@ class BoxClient(object):
             query['version'] = version
 
         return self._get('files/{}/content'.format(file_id), query=query, stream=True, raw=True)
+
+    def get_thumbnail_url(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None):
+        """
+        Downloads a file
+
+        Args:
+            - file_id: The ID of the file to download.
+            - extension:  Currently thumbnails are only available png
+            - min_height: (optional) The minimum height of the thumbnail.
+            - max_height: (optional) The maximum height of the thumbnail
+            - min_width: (optional) The minimum width of the thumbnail
+            - max_width: (optional) The maximum width of the thumbnail
+
+        Returns a file-like object to the file content
+        """
+
+        query = {}
+        if min_height:
+            query['min_height'] = min_height
+        if max_height:
+            query['max_height'] = max_height
+        if min_width:
+            query['min_width'] = min_width
+        if max_width:
+            query['max_width'] = max_width
+
+        return self._get('files/{}/thumbnail.{}'.format(file_id, extension), query=query)
 
     def upload_file(self, filename, fileobj, parent=0):
         """

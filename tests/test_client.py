@@ -249,6 +249,22 @@ class TestClient(unittest.TestCase):
         downloaded_file = client.download_file(123, 1000)
         self.assertEqual('hello world', downloaded_file.read())
 
+    def test_get_thumbnail_on_url(self):
+        client = BoxClient("my_token")
+
+        flexmock(requests) \
+            .should_receive('request') \
+            .with_args("get",
+                       'https://api.box.com/2.0/files/123/thumbnail.png',
+                       params={},
+                       data=None,
+                       headers=client.default_headers) \
+            .and_return(self.make_response(status_code=202, headers={"Location": "http://box.com"})) \
+            .once()
+
+        thumbnail_url = client.get_thumbnail_url(123)
+        self.assertEqual("http://box.com", thumbnail_url)
+
     def test_upload_file(self):
         client = self.make_client("post", "files/content", endpoint="upload", data={'parent_id': '666'}, files={'hello.jpg': FileObjMatcher('hello world')},
                                   result={"entries": [{"id": "1"}]})
