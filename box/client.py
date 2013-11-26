@@ -293,7 +293,7 @@ class BoxClient(object):
         response = self._get('users/' + username)
         self._handle_error(response)
 
-        return response
+        return response.json()
 
     def get_user_list(self, count=100, offset=0):
         """

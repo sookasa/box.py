@@ -196,19 +196,23 @@ class TestClient(unittest.TestCase):
 
     def test_get_user_info(self):
         client = self.make_client()
+        response = self.make_response({'name': 'bla'})
 
         flexmock(client) \
             .should_receive('_get') \
             .with_args('users/me') \
-            .and_return({'name': 'bla'}) \
+            .and_return(response) \
             .once()
 
         self.assertDictEqual(client.get_user_info(), {'name': 'bla'})
 
         client = self.make_client()
+        response = self.make_response()
+
         flexmock(client) \
             .should_receive('_get') \
             .with_args('users/john') \
+            .and_return(response) \
             .once()
 
         client.get_user_info('john')
