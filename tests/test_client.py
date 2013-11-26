@@ -42,8 +42,8 @@ class TestClient(unittest.TestCase):
 
         return client
 
-    def make_response(self, content=None):
-        return flexmock(ok=True, status_code=200, json=lambda: content)
+    def make_response(self, content=None, status_code=200, headers=None):
+        return flexmock(ok=True, status_code=status_code, json=lambda: content, headers=headers)
 
     def test_init_with_string(self):
         flexmock(CredentialsV2)\
