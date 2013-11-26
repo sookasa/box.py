@@ -213,10 +213,7 @@ class CredentialsV2(object):
         if not self._refresh_token or not self._client_id or not self._client_secret:
             return False
 
-        try:
-            result = refresh_v2_token(self._client_id, self._client_secret, self._refresh_token)
-        except BoxAuthenticationException:
-            return False
+        result = refresh_v2_token(self._client_id, self._client_secret, self._refresh_token)
 
         self._access_token = result["access_token"]
         if self._refresh_callback:
