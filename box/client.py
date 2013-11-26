@@ -235,7 +235,7 @@ class BoxClient(object):
         if not exception:
             exception = BoxClientException
 
-        raise exception(response.text, object_id)
+        raise exception(response.status_code, response.text, object_id)
 
     def _request(self, method, resource, params=None, data=None, headers=None, **kwargs):
         if isinstance(data, dict):
@@ -644,8 +644,9 @@ class BoxClient(object):
 
 
 class BoxClientException(Exception):
-    def __init__(self, message=None, object_id=None, **kwargs):
+    def __init__(self, status_code, message=None, object_id=None, **kwargs):
         super(BoxClientException, self).__init__(message)
+        self.status_code = status_code
         self.message = message
         self.object_id = object_id
         self.__dict__.update(kwargs)

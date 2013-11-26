@@ -813,6 +813,7 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(BoxClientException) as expect_exception:
             client.long_poll_for_events('some_stream_position', stream_type=EventFilter.CHANGES)
 
+        self.assertEqual(400, expect_exception.exception.status_code)
         self.assertEqual('some error', expect_exception.exception.message)
 
 
