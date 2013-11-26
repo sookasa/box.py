@@ -237,29 +237,34 @@ class BoxClient(object):
 
         raise exception(response.text, object_id)
 
-    def _get(self, resource, query=None, **kwargs):
-        return requests.get('https://api.box.com/2.0/' + resource, params=query, headers=self._headers, **kwargs)
-
-    def _post(self, resource, data=None, **kwargs):
+    def _request(self, method, resource, params=None, data=None, headers=None, **kwargs):
         if isinstance(data, dict):
             data = json.dumps(data)
 
-        return requests.post('https://api.box.com/2.0/' + resource, data, headers=self._headers, **kwargs)
-
-    def _put(self, resource, data=None, **kwargs):
-        if isinstance(data, dict):
-            data = json.dumps(data)
-
-        return requests.put('https://api.box.com/2.0/' + resource, data, headers=self._headers, **kwargs)
-
-    def _delete(self, resource, headers=None, **kwargs):
         if headers:
             headers = dict(headers)
             headers.update(self._headers)
         else:
             headers = self._headers
 
-        return requests.delete('https://api.box.com/2.0/' + resource, headers=headers, **kwargs)
+        url = 'https://api.box.com/2.0/%s' % resource
+
+        response = requests.request(method, url, params=params, data=data, headers=headers, **kwargs)
+        self._handle_error(response)
+
+        return response
+
+    def _get(self, resource, query=None, **kwargs):
+        return self._request("get", resource, params=query, **kwargs)
+
+    def _post(self, resource, data=None, **kwargs):
+        return self._request("post", resource, data=data, **kwargs)
+
+    def _put(self, resource, data=None, **kwargs):
+        return self._request("put", resource, data=data, **kwargs)
+
+    def _delete(self, resource, headers=None, **kwargs):
+        return self._request("delete", resource, headers=headers, **kwargs)
 
     @classmethod
     def _get_id(cls, identifier):

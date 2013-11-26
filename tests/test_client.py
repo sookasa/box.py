@@ -80,8 +80,13 @@ class TestClient(unittest.TestCase):
         client = BoxClient('my_token')
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('get') \
-            .with_args('https://api.box.com/2.0/foo', params={'arg': 'value'}, headers=client._headers, crap=1) \
+            .should_receive('request') \
+            .with_args('get',
+                       'https://api.box.com/2.0/foo',
+                       params={'arg': 'value'},
+                       data=None,
+                       headers=client._headers,
+                       crap=1) \
             .and_return(expected_response) \
             .once()
 
@@ -94,9 +99,11 @@ class TestClient(unittest.TestCase):
         expected_data = {'arg': 'value'}
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('post') \
-            .with_args('https://api.box.com/2.0/foo',
-                       CallableMatcher(lambda x: json.loads(x) == expected_data),
+            .should_receive('request') \
+            .with_args('post',
+                       'https://api.box.com/2.0/foo',
+                       params=None,
+                       data=json.dumps(expected_data),
                        headers=client._headers,
                        crap=1) \
             .and_return(expected_response) \
@@ -111,9 +118,11 @@ class TestClient(unittest.TestCase):
         expected_data = 'mooooo'
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('post') \
-            .with_args('https://api.box.com/2.0/foo',
-                       expected_data,
+            .should_receive('request') \
+            .with_args('post',
+                       'https://api.box.com/2.0/foo',
+                       params=None,
+                       data=expected_data,
                        headers=client._headers,
                        crap=1) \
             .and_return(expected_response) \
@@ -128,9 +137,11 @@ class TestClient(unittest.TestCase):
         expected_data = {'arg': 'value'}
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('put') \
-            .with_args('https://api.box.com/2.0/foo',
-                       CallableMatcher(lambda x: json.loads(x) == expected_data),
+            .should_receive('request') \
+            .with_args('put',
+                       'https://api.box.com/2.0/foo',
+                       params=None,
+                       data=json.dumps(expected_data),
                        headers=client._headers,
                        crap=1) \
             .and_return(expected_response) \
@@ -145,9 +156,11 @@ class TestClient(unittest.TestCase):
         expected_data = 'mooooo'
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('put') \
-            .with_args('https://api.box.com/2.0/foo',
-                       expected_data,
+            .should_receive('request') \
+            .with_args('put',
+                       'https://api.box.com/2.0/foo',
+                       params=None,
+                       data=expected_data,
                        headers=client._headers,
                        crap=1) \
             .and_return(expected_response) \
@@ -164,8 +177,11 @@ class TestClient(unittest.TestCase):
 
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('delete') \
-            .with_args('https://api.box.com/2.0/foo',
+            .should_receive('request') \
+            .with_args('delete',
+                       'https://api.box.com/2.0/foo',
+                       params=None,
+                       data=None,
                        headers=expected_headers,
                        crap=1) \
             .and_return(expected_response) \
@@ -183,8 +199,11 @@ class TestClient(unittest.TestCase):
 
         expected_response = self.make_response()
         flexmock(requests) \
-            .should_receive('delete') \
-            .with_args('https://api.box.com/2.0/foo',
+            .should_receive('request') \
+            .with_args('delete',
+                       'https://api.box.com/2.0/foo',
+                       params=None,
+                       data=None,
                        headers=expected_headers,
                        crap=1) \
             .and_return(expected_response) \
