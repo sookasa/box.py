@@ -57,23 +57,28 @@ class TestClient(unittest.TestCase):
 
         with self.assertRaises(ItemAlreadyExists) as expected_exception:
             client._handle_error(flexmock(ok=False, status_code=CONFLICT, text='something terrible'))
+        self.assertEqual(CONFLICT, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(ItemDoesNotExist) as expected_exception:
             client._handle_error(flexmock(ok=False, status_code=NOT_FOUND, text='something terrible'))
+        self.assertEqual(NOT_FOUND, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(PreconditionFailed) as expected_exception:
             client._handle_error(flexmock(ok=False, status_code=PRECONDITION_FAILED, text='something terrible'))
+        self.assertEqual(PRECONDITION_FAILED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(BoxAccountUnauthorized) as expected_exception:
             client._handle_error(flexmock(ok=False, status_code=UNAUTHORIZED, text='something terrible'))
+        self.assertEqual(UNAUTHORIZED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         # unknown code
         with self.assertRaises(BoxClientException) as expected_exception:
             client._handle_error(flexmock(ok=False, status_code=599, text='something terrible'))
+        self.assertEqual(599, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
     def test_get(self):
