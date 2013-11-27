@@ -216,8 +216,10 @@ class CredentialsV2(object):
         result = refresh_v2_token(self._client_id, self._client_secret, self._refresh_token)
 
         self._access_token = result["access_token"]
+        if "refresh_token" in result:
+            self._refresh_token = result["refresh_token"]
         if self._refresh_callback:
-            self._refresh_callback(self._access_token)
+            self._refresh_callback(self._access_token, self._refresh_token)
 
         return True
 
