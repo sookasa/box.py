@@ -441,7 +441,7 @@ class BoxClient(object):
 
         return self._get('files/{}/content'.format(file_id), query=query, stream=True, raw=True)
 
-    def get_thumbnail_url(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None):
+    def get_thumbnail(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None, max_wait=0):
         """
         Downloads a file
 
@@ -456,17 +456,34 @@ class BoxClient(object):
         Returns a file-like object to the file content
         """
 
-        query = {}
-        if min_height:
-            query['min_height'] = min_height
-        if max_height:
-            query['max_height'] = max_height
-        if min_width:
-            query['min_width'] = min_width
-        if max_width:
-            query['max_width'] = max_width
+        params = {}
+        if min_height is not None:
+            params['min_height'] = min_height
+        if max_height is not None:
+            params['max_height'] = max_height
+        if min_width is not None:
+            params['min_width'] = min_width
+        if max_width is not None:
+            params['max_width'] = max_width
 
-        return self._get('files/{}/thumbnail.{}'.format(file_id, extension), query=query, raw=True)
+        response = self._request("get", 'files/{}/thumbnail.{}'.format(file_id, extension), params=params, raw=True)
+        if response.status_code == 202:
+            # Thumbnail not ready yet
+            ready_in_seconds = int(response.headers["Retry-After"])
+            if ready_in_seconds > max_wait:
+                return None
+
+            # Wait for the thumbnail to get ready
+            time.sleep(ready_in_seconds)
+
+            response = requests.get(response.headers["Location"])
+            self._check_for_errors(response)
+            return response.raw
+        elif response.status_code == 302:
+            # No thumbnail available
+            return None
+        else:
+            return response.raw
 
     def upload_file(self, filename, fileobj, parent=0):
         """

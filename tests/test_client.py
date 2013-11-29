@@ -249,9 +249,10 @@ class TestClient(unittest.TestCase):
         downloaded_file = client.download_file(123, 1000)
         self.assertEqual('hello world', downloaded_file.read())
 
-    def test_get_thumbnail_on_url(self):
+    def test_get_thumbnail(self):
         client = BoxClient("my_token")
 
+        # Delayed without wait allowed
         flexmock(requests) \
             .should_receive('request') \
             .with_args("get",
@@ -259,11 +260,59 @@ class TestClient(unittest.TestCase):
                        params={},
                        data=None,
                        headers=client.default_headers) \
-            .and_return(self.make_response(status_code=202, headers={"Location": "http://box.com"})) \
+            .and_return(self.make_response(status_code=202, headers={"Location": "http://box.com", "Retry-After": "5"})) \
             .once()
 
-        thumbnail_url = client.get_thumbnail_url(123)
-        self.assertEqual("http://box.com", thumbnail_url)
+        thumbnail = client.get_thumbnail(123)
+        self.assertIsNone(thumbnail)
+
+        # Delayed within allowed wait time
+        flexmock(requests) \
+            .should_receive('request') \
+            .with_args("get",
+                       'https://api.box.com/2.0/files/123/thumbnail.png',
+                       params={},
+                       data=None,
+                       headers=client.default_headers) \
+            .and_return(self.make_response(status_code=202, headers={"Location": "http://box.com/url_to_thumbnail", "Retry-After": "1"})) \
+            .once()
+
+        flexmock(requests) \
+            .should_receive('get') \
+            .with_args('http://box.com/url_to_thumbnail') \
+            .and_return(self.make_response(status_code=200, content=StringIO("Thumbnail contents"))) \
+            .once()
+
+        thumbnail = client.get_thumbnail(123, max_wait=1)
+        self.assertEqual('Thumbnail contents', thumbnail.read())
+
+        # Not available
+        flexmock(requests) \
+            .should_receive('request') \
+            .with_args("get",
+                       'https://api.box.com/2.0/files/123/thumbnail.png',
+                       params={},
+                       data=None,
+                       headers=client.default_headers) \
+            .and_return(self.make_response(status_code=302)) \
+            .once()
+
+        thumbnail = client.get_thumbnail(123)
+        self.assertIsNone(thumbnail)
+
+        # Already available
+        flexmock(requests) \
+            .should_receive('request') \
+            .with_args("get",
+                       'https://api.box.com/2.0/files/123/thumbnail.png',
+                       params={},
+                       data=None,
+                       headers=client.default_headers) \
+            .and_return(self.make_response(status_code=200, content=StringIO("Thumbnail contents"))) \
+            .once()
+
+        thumbnail = client.get_thumbnail(123)
+        self.assertEqual('Thumbnail contents', thumbnail.read())
 
     def test_upload_file(self):
         client = self.make_client("post", "files/content", endpoint="upload", data={'parent_id': '666'}, files={'hello.jpg': FileObjMatcher('hello world')},
