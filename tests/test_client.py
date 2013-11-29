@@ -299,10 +299,6 @@ class TestClient(unittest.TestCase):
     def test_share_link(self):
         # defaults
         args = {
-            'permissions': {
-                'can_preview': True,
-                'can_download': True,
-            },
             'access': 'open'
         }
 

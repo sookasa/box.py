@@ -547,13 +547,16 @@ class BoxClient(object):
                 }
             }
         """
-        args = {
-            'access': access,
-            'permissions': {'can_download': can_download,
-                            'can_preview': can_preview
-                            }
+        data = {
+            'access': access
         }
 
+        if can_download is not None or can_preview is not None:
+            data['permissions'] = {}
+            if can_download is not None:
+                data['permissions']['can_download'] = can_download
+            if can_preview is not None:
+                data['permissions']['can_preview'] = can_preview
         if expire_at:
             args['unshared_at'] = expire_at.isoformat()
 
