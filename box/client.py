@@ -5,10 +5,12 @@ For extended specs, see: http://developers.box.com/docs/
 
 from httplib import NOT_FOUND, PRECONDITION_FAILED, CONFLICT, UNAUTHORIZED
 import json
+from os import path
+import time
 from urllib import urlencode
 import urlparse
+
 import requests
-from os import path
 
 
 class EventFilter(object):
@@ -236,18 +238,10 @@ class BoxClient(object):
 
         self.credentials = credentials
 
-    def _process_response(self, response, raw=False):
+    def _check_for_errors(self, response):
         if not response.ok:
             exception = EXCEPTION_MAP.get(response.status_code, BoxClientException)
             raise exception(response.status_code, response.text)
-
-        if response.status_code in (202, 302):
-            return response.headers["Location"]
-
-        if raw:
-            return response.raw
-        else:
-            return response.json()
 
     @property
     def default_headers(self):
@@ -270,19 +264,12 @@ class BoxClient(object):
         if response.status_code == UNAUTHORIZED and try_refresh and self.credentials.refresh():
             return self._request(method, resource, params, data, headers, try_refresh=False, **kwargs)
 
-        return self._process_response(response, raw=raw)
+        self._check_for_errors(response)
 
-    def _get(self, resource, query=None, **kwargs):
-        return self._request("get", resource, params=query, **kwargs)
+        if raw:
+            return response
 
-    def _post(self, resource, data=None, **kwargs):
-        return self._request("post", resource, data=data, **kwargs)
-
-    def _put(self, resource, data=None, **kwargs):
-        return self._request("put", resource, data=data, **kwargs)
-
-    def _delete(self, resource, headers=None, **kwargs):
-        return self._request("delete", resource, headers=headers, **kwargs)
+        return response.json()
 
     @classmethod
     def _get_id(cls, identifier):
@@ -306,7 +293,7 @@ class BoxClient(object):
 
         """
         username = username or 'me'
-        return self._get('users/' + username)
+        return self._request("get", 'users/' + username)
 
     def get_user_list(self, limit=100, offset=0):
         """
@@ -322,7 +309,7 @@ class BoxClient(object):
             'offset': offset,
         }
 
-        return self._get('users/', params)
+        return self._request("get", 'users/', params)
 
     def get_folder(self, folder_id, limit=100, offset=0, fields=None):
         """
@@ -342,7 +329,7 @@ class BoxClient(object):
         if fields:
             params['fields'] = fields
 
-        return self._get('folders/{}'.format(folder_id), params)
+        return self._request("get", 'folders/{}'.format(folder_id), params=params)
 
     def get_folder_content(self, folder_id, limit=100, offset=0, fields=None):
         """
@@ -362,7 +349,7 @@ class BoxClient(object):
         if fields:
             params['fields'] = fields
 
-        return self._get('folders/{}/items'.format(folder_id), params)
+        return self._request("get", 'folders/{}/items'.format(folder_id), params=params)
 
     def get_folder_iterator(self, folder_id):
         """
@@ -387,10 +374,10 @@ class BoxClient(object):
         Args:
             - parent: (optional) ID or a Dictionary (as returned by the apis) of the parent folder
         """
-        args = {"name": name}
-        args['parent'] = {'id': self._get_id(parent)}
+        data = {"name": name,
+                'parent': {'id': self._get_id(parent)}}
 
-        return self._post('folders', args)
+        return self._request("post", 'folders', data=data)
 
     def get_file_metadata(self, file_id):
         """
@@ -401,7 +388,7 @@ class BoxClient(object):
 
         Returns a dictionary with all of the file metadata.
         """
-        return self._get('files/{}'.format(file_id))
+        return self._request("get", 'files/{}'.format(file_id))
 
     def delete_file(self, file_id, etag=None):
         """
@@ -416,13 +403,13 @@ class BoxClient(object):
         if etag:
             headers['If-Match'] = etag
 
-        self._delete('files/{}'.format(file_id), headers)
+        self._request("delete", 'files/{}'.format(file_id), headers=headers)
 
     def delete_trashed_file(self, file_id):
         """
         Permanently deletes an item that is in the trash.
         """
-        self._delete('files/{}/trash'.format(file_id))
+        self._request("delete", 'files/{}/trash'.format(file_id))
 
     def download_file(self, file_id, version=None):
         """
@@ -435,11 +422,11 @@ class BoxClient(object):
         Returns a file-like object to the file content
         """
 
-        query = {}
+        params = {}
         if version:
-            query['version'] = version
+            params['version'] = version
 
-        return self._get('files/{}/content'.format(file_id), query=query, stream=True, raw=True)
+        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True, raw=True).raw
 
     def get_thumbnail(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None, max_wait=0):
         """
@@ -530,13 +517,13 @@ class BoxClient(object):
             - a dictionary with the new file metadata
         """
 
-        args = {'parent': {'id': self._get_id(destination_parent)}}
+        data = {'parent': {'id': self._get_id(destination_parent)}}
         if new_filename:
-            args['name'] = new_filename
+            data['name'] = new_filename
 
-        return self._post('files/{}/copy'.format(file_id), args)
+        return self._request("post", 'files/{}/copy'.format(file_id), data=data)
 
-    def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=True, can_preview=True):
+    def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=None, can_preview=None):
         """
         Creates a share link for the file_id
         Args:
@@ -574,10 +561,11 @@ class BoxClient(object):
                 data['permissions']['can_download'] = can_download
             if can_preview is not None:
                 data['permissions']['can_preview'] = can_preview
-        if expire_at:
-            args['unshared_at'] = expire_at.isoformat()
 
-        result = self._put('files/{}'.format(file_id), {'shared_link': args})
+        if expire_at:
+            data['unshared_at'] = expire_at.isoformat()
+
+        result = self._request("put", 'files/{}'.format(file_id), data={'shared_link': data})
         return result['shared_link']
 
     def get_events(self, stream_position='0', stream_type=EventFilter.ALL, limit=1000):
@@ -595,13 +583,13 @@ class BoxClient(object):
             - a dictionary containing metadata & the events
         """
 
-        query = {
+        params = {
             'stream_position': str(stream_position),
             'stream_type': stream_type,
             'limit': limit
         }
 
-        return self._get('events', query)
+        return self._request("get", 'events', params)
 
     def long_poll_for_events(self, stream_position=None, stream_type=EventFilter.ALL):
         """
@@ -625,7 +613,8 @@ class BoxClient(object):
             query['stream_position'] = stream_position
             query['stream_type'] = stream_type
             response = requests.get(url, params=query)
-            result = self._process_response(response)
+            self._check_for_errors(response)
+            result = response.json()
 
             if result['message'] in ['new_message', 'new_change']:
                 return stream_position
@@ -673,7 +662,7 @@ class BoxClient(object):
             'offset': offset,
         }
 
-        return self._get('search', params)
+        return self._request("get", 'search', params)
 
 
 class BoxClientException(Exception):

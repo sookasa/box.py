@@ -19,8 +19,7 @@ class TestClient(unittest.TestCase):
         """
         client = BoxClient('my_token')
         flexmock(client) \
-            .should_receive('_process_response') \
-            .and_return(result) \
+            .should_receive('_check_for_errors') \
             .once()
 
         if headers:
@@ -43,7 +42,7 @@ class TestClient(unittest.TestCase):
         return client
 
     def make_response(self, content=None, status_code=200, headers=None):
-        return flexmock(ok=True, status_code=status_code, json=lambda: content, headers=headers)
+        return flexmock(ok=True, status_code=status_code, json=lambda: content, raw=content, headers=headers)
 
     def test_init_with_string(self):
         flexmock(CredentialsV2)\
@@ -71,68 +70,67 @@ class TestClient(unittest.TestCase):
     def test_handle_error(self):
         client = BoxClient('my_token')
 
-        self.assertIsNone(client._process_response(self.make_response()))
+        self.assertIsNone(client._check_for_errors(self.make_response()))
 
         with self.assertRaises(ItemAlreadyExists) as expected_exception:
-            client._process_response(flexmock(ok=False, status_code=CONFLICT, text='something terrible'))
+            client._check_for_errors(flexmock(ok=False, status_code=CONFLICT, text='something terrible'))
         self.assertEqual(CONFLICT, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(ItemDoesNotExist) as expected_exception:
-            client._process_response(flexmock(ok=False, status_code=NOT_FOUND, text='something terrible'))
+            client._check_for_errors(flexmock(ok=False, status_code=NOT_FOUND, text='something terrible'))
         self.assertEqual(NOT_FOUND, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(PreconditionFailed) as expected_exception:
-            client._process_response(flexmock(ok=False, status_code=PRECONDITION_FAILED, text='something terrible'))
+            client._check_for_errors(flexmock(ok=False, status_code=PRECONDITION_FAILED, text='something terrible'))
         self.assertEqual(PRECONDITION_FAILED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(BoxAccountUnauthorized) as expected_exception:
-            client._process_response(flexmock(ok=False, status_code=UNAUTHORIZED, text='something terrible'))
+            client._check_for_errors(flexmock(ok=False, status_code=UNAUTHORIZED, text='something terrible'))
         self.assertEqual(UNAUTHORIZED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         # unknown code
         with self.assertRaises(BoxClientException) as expected_exception:
-            client._process_response(flexmock(ok=False, status_code=599, text='something terrible'))
+            client._check_for_errors(flexmock(ok=False, status_code=599, text='something terrible'))
         self.assertEqual(599, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
     def test_get(self):
         client = self.make_client("get", "foo", params={'arg': 'value'}, crap=1)
-        client._get('foo', {'arg': 'value'}, crap=1)
+        client._request('get', 'foo', {'arg': 'value'}, crap=1)
 
     def test_post_dict(self):
         expected_data = {'arg': 'value'}
         client = self.make_client("post", "foo", data=expected_data, crap=1)
-
-        actual_response = client._post('foo', expected_data, crap=1)
+        actual_response = client._request('post', 'foo', data=expected_data, crap=1)
         self.assertEqual(None, actual_response)
 
     def test_post_data(self):
         expected_data = "mooooo"
         client = self.make_client("post", "foo", data=expected_data, crap=1)
-        actual_response = client._post('foo', expected_data, crap=1)
+        actual_response = client._request('post', 'foo', data=expected_data, crap=1)
         self.assertEqual(None, actual_response)
 
     def test_put_dict(self):
         expected_data = {'arg': 'value'}
         client = self.make_client("put", "foo", data=expected_data, crap=1)
-        actual_response = client._put('foo', expected_data, crap=1)
+        actual_response = client._request('put', 'foo', data=expected_data, crap=1)
         self.assertEqual(None, actual_response)
 
     def test_put_data(self):
         expected_data = 'mooooo'
         client = self.make_client("put", "foo", data=expected_data, crap=1)
-        actual_response = client._put('foo', expected_data, crap=1)
+        actual_response = client._request('put', 'foo', data=expected_data, crap=1)
         self.assertEqual(None, actual_response)
 
     def test_delete(self):
         custom_headers = {'hello': 'world'}
 
         client = self.make_client("delete", "foo", headers=custom_headers, crap=1)
-        actual_response = client._delete('foo', headers=custom_headers, crap=1)
+        actual_response = client._request('delete', 'foo', headers=custom_headers, crap=1)
         self.assertEqual(None, actual_response)
 
         # verify headers were not modified
@@ -140,7 +138,7 @@ class TestClient(unittest.TestCase):
 
     def test_delete_no_headers(self):
         client = self.make_client("delete", "foo", crap=1)
-        actual_response = client._delete('foo', crap=1)
+        actual_response = client._request('delete', 'foo', crap=1)
         self.assertEqual(None, actual_response)
 
 
