@@ -463,7 +463,7 @@ class BoxClient(object):
             # Wait for the thumbnail to get ready
             time.sleep(ready_in_seconds)
 
-            response = requests.get(response.headers["Location"])
+            response = requests.get(response.headers["Location"], headers=self.default_headers)
             self._check_for_errors(response)
             return response.raw
         elif response.status_code == 302:

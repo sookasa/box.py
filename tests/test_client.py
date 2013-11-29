@@ -277,7 +277,7 @@ class TestClient(unittest.TestCase):
 
         flexmock(requests) \
             .should_receive('get') \
-            .with_args('http://box.com/url_to_thumbnail') \
+            .with_args('http://box.com/url_to_thumbnail', headers=client.default_headers) \
             .and_return(self.make_response(status_code=200, content=StringIO("Thumbnail contents"))) \
             .once()
 
