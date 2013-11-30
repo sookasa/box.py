@@ -71,28 +71,28 @@ class TestClient(unittest.TestCase):
         self.assertIsNone(client._check_for_errors(mocked_response()))
 
         with self.assertRaises(ItemAlreadyExists) as expected_exception:
-            client._check_for_errors(flexmock(ok=False, status_code=CONFLICT, text='something terrible'))
+            client._check_for_errors(mocked_response('something terrible', status_code=CONFLICT))
         self.assertEqual(CONFLICT, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(ItemDoesNotExist) as expected_exception:
-            client._check_for_errors(flexmock(ok=False, status_code=NOT_FOUND, text='something terrible'))
+            client._check_for_errors(mocked_response('something terrible', status_code=NOT_FOUND))
         self.assertEqual(NOT_FOUND, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(PreconditionFailed) as expected_exception:
-            client._check_for_errors(flexmock(ok=False, status_code=PRECONDITION_FAILED, text='something terrible'))
+            client._check_for_errors(mocked_response('something terrible', status_code=PRECONDITION_FAILED))
         self.assertEqual(PRECONDITION_FAILED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         with self.assertRaises(BoxAccountUnauthorized) as expected_exception:
-            client._check_for_errors(flexmock(ok=False, status_code=UNAUTHORIZED, text='something terrible'))
+            client._check_for_errors(mocked_response('something terrible', status_code=UNAUTHORIZED))
         self.assertEqual(UNAUTHORIZED, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
         # unknown code
         with self.assertRaises(BoxClientException) as expected_exception:
-            client._check_for_errors(flexmock(ok=False, status_code=599, text='something terrible'))
+            client._check_for_errors(mocked_response('something terrible', status_code=599))
         self.assertEqual(599, expected_exception.exception.status_code)
         self.assertEqual('something terrible', expected_exception.exception.message)
 
@@ -322,7 +322,7 @@ class TestClient(unittest.TestCase):
         flexmock(requests) \
             .should_receive('get') \
             .with_args('http://box.com/url_to_thumbnail', headers=client.default_headers) \
-            .and_return(mocked_response(status_code=200, content=StringIO("Thumbnail contents"))) \
+            .and_return(mocked_response(StringIO("Thumbnail contents"))) \
             .once()
 
         thumbnail = client.get_thumbnail(123, max_wait=1)
@@ -350,7 +350,7 @@ class TestClient(unittest.TestCase):
                        params={},
                        data=None,
                        headers=client.default_headers) \
-            .and_return(mocked_response(status_code=200, content=StringIO("Thumbnail contents"))) \
+            .and_return(mocked_response(StringIO("Thumbnail contents"))) \
             .once()
 
         thumbnail = client.get_thumbnail(123)
@@ -367,7 +367,7 @@ class TestClient(unittest.TestCase):
                                "max_width": 4},
                        data=None,
                        headers=client.default_headers) \
-            .and_return(mocked_response(status_code=200, content=StringIO("Thumbnail contents"))) \
+            .and_return(mocked_response(StringIO("Thumbnail contents"))) \
             .once()
 
         thumbnail = client.get_thumbnail(123, min_height=1, max_height=2, min_width=3, max_width=4)
@@ -652,7 +652,7 @@ class TestClient(unittest.TestCase):
             .should_receive('get') \
             .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params) \
             .and_return(mocked_response({'message': 'foo'})) \
-            .and_return(flexmock(ok=False, text='some error', status_code=400)) \
+            .and_return(mocked_response('some error', status_code=400)) \
             .times(2)
 
         with self.assertRaises(BoxClientException) as expect_exception:

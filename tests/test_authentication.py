@@ -17,7 +17,7 @@ class TestAuthenticationV1(unittest.TestCase):
         self.assertEqual(CredentialsV1("foo", "bar").refresh(), False)
 
     def test_start_authenticate_v1(self):
-        response = flexmock(ok=True, text='<response><status>get_ticket_ok</status><ticket>golden_ticket</ticket></response>')
+        response = mocked_response('<response><status>get_ticket_ok</status><ticket>golden_ticket</ticket></response>')
         flexmock(requests)\
             .should_receive('get')\
             .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')\
@@ -26,7 +26,7 @@ class TestAuthenticationV1(unittest.TestCase):
         self.assertEqual(start_authenticate_v1('my_api_key'), 'https://www.box.com/api/1.0/auth/golden_ticket')
 
     def test_start_authenticate_v1_fail(self):
-        response = mocked_response(status_code=400, content='something_terrible')
+        response = mocked_response('something_terrible', status_code=400)
         flexmock(requests)\
             .should_receive('get')\
             .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')\
@@ -50,7 +50,7 @@ class TestAuthenticationV1(unittest.TestCase):
         self.assertEqual('something_terrible', expected_exception.exception.message)
 
     def test_finish_authenticate_v1(self):
-        response = flexmock(ok=True, text="""<response><status>get_auth_token_ok</status>
+        response = mocked_response("""<response><status>get_auth_token_ok</status>
         <auth_token>123456</auth_token>
         <user>
             <name>test_name</name>
@@ -73,7 +73,7 @@ class TestAuthenticationV1(unittest.TestCase):
         })
 
     def test_finish_authenticate_error(self):
-        response = mocked_response(status_code=400, content='something_terrible')
+        response = mocked_response('something_terrible', status_code=400)
         flexmock(requests)\
             .should_receive('get')\
             .with_args('https://www.box.com/api/1.0/rest', params={
