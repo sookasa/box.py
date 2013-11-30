@@ -196,13 +196,22 @@ class CredentialsV1(object):
         return {'Authorization': 'BoxAuth api_key={}&auth_token={}'.format(self._api_key, self._access_token)}
 
     def refresh(self):
+        """
+        V1 credentials cannot be refreshed, but doesn't expire either
+        
+        Always returns False
+        """
         return False
 
 class CredentialsV2(object):
     """
     v2 credentials
     Args:
-        - access_token: the user access token
+        - access_token: The user access token
+        - refresh_token: The user refresh token (optional)
+        - client_id: The client_id you obtained in the initial setup (optional)
+        - client_secret: The client_secret you obtained in the initial setup (optional)
+        - refresh_call: A method that will be called when the tokens have been refreshed. Should take two arguments, access_token and refresh_token. (optional)
     """
     def __init__(self, access_token, refresh_token=None, client_id=None, client_secret=None, refresh_callback=None):
         self._access_token = access_token
@@ -216,6 +225,12 @@ class CredentialsV2(object):
         return {'Authorization': 'Bearer {}'.format(self._access_token)}
 
     def refresh(self):
+        """
+        Refreshes the access token based on the the refresh token, client id and secret if available.
+        
+        Returns True if the refresh was successful, False if the refresh could not be performed, 
+        and raises BoxAuthenticationException if the refresh failed
+        """
         if not self._refresh_token or not self._client_id or not self._client_secret:
             return False
 
@@ -251,7 +266,24 @@ class BoxClient(object):
     def default_headers(self):
         return self.credentials.headers
 
-    def _request(self, method, resource, params=None, data=None, headers=None, try_refresh=True, endpoint="api", raw=False, **kwargs):
+    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, **kwargs):
+        """
+        Performs a HTTP request to Box. 
+        
+        This method adds authentication headers, and performs error checking on the response. 
+        It also automatically tries to refresh tokens, if possible. 
+        Args:
+            - method: The type of HTTP method, f.ex. get or post
+            - resource: The resource to request (without shared prefix)
+            - params: Any query parameters to send
+            - data: Any data to send. If data is a dict, it will be encoded as json
+            - headers: Any additional headers
+            - endpoint: The endpoint to use, f.ex. api or upload, defaults to api
+            - raw: True if the full response should be returned, otherwise the parsed json body will be returned
+            - try_refresh: True if a refresh of the credentials should be attempted, False otherwise
+            - **kwargs: Any addiitonal arguments to pass to the request
+        """
+
         if isinstance(data, dict):
             data = json.dumps(data)
 
