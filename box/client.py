@@ -136,6 +136,7 @@ def finish_authenticate_v2(client_id, client_secret, code):
     }
 
     """
+
     return _oauth2_token_request(client_id, client_secret, 'authorization_code', code=code)
 
 
@@ -168,9 +169,12 @@ def _oauth2_token_request(client_id, client_secret, grant_type, **kwargs):
         'client_secret': client_secret,
         'grant_type': grant_type
     }
-
     args.update(kwargs)
     response = requests.post('https://www.box.com/api/oauth2/token', args)
+
+    return _handle_auth_response(response)
+
+def _handle_auth_response(response):
     result = response.json()
     if 'error' in result:
         raise BoxAuthenticationException(response.status_code, message=result.get('error_description'), error=result['error'])
