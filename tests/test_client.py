@@ -139,6 +139,52 @@ class TestClient(unittest.TestCase):
         actual_response = client._request('delete', 'foo', crap=1)
         self.assertEqual(None, actual_response)
 
+    def test_automatic_refresh(self):
+        credentials = CredentialsV2("access_token", "refresh_token", "client_id", "client_secret")
+        client = BoxClient(credentials)
+
+        requests_mock = flexmock(requests)
+
+        # The first attempt, which is denied
+        requests_mock \
+            .should_receive('request') \
+            .with_args("get",
+                       'https://api.box.com/2.0/users/me',
+                       params=None,
+                       data=None,
+                       headers=client.default_headers) \
+            .and_return(mocked_response(status_code=401)) \
+            .once()
+
+        # The call to refresh the token
+        requests_mock \
+            .should_receive('post')\
+            .with_args('https://www.box.com/api/oauth2/token', {
+                'client_id': 'client_id',
+                'client_secret': 'client_secret',
+                'refresh_token': 'refresh_token',
+                'grant_type': 'refresh_token',
+            })\
+            .and_return(mocked_response({"access_token": "new_access_token",
+                                         "refresh_token": "new_refresh_token"}))\
+            .once()
+
+        # The second attempt with the new access token
+        requests_mock \
+            .should_receive('request') \
+            .with_args("get",
+                       'https://api.box.com/2.0/users/me',
+                       params=None,
+                       data=None,
+                       headers={"Authorization": "Bearer new_access_token"}) \
+            .and_return(mocked_response({'name': 'bla'})) \
+            .once()
+
+        result = client.get_user_info()
+        self.assertDictEqual(result, {'name': 'bla'})
+
+        self.assertEqual(credentials._access_token, "new_access_token")
+        self.assertEqual(credentials._refresh_token, "new_refresh_token")
 
     def test_get_user_info(self):
         client = self.make_client("get", 'users/me', result={'name': 'bla'})
