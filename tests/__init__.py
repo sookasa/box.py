@@ -1,4 +1,7 @@
 from StringIO import StringIO
+from datetime import tzinfo, timedelta, datetime
+
+from flexmock import flexmock
 
 
 class FileObjMatcher(object):
@@ -23,7 +26,6 @@ class FileObjMatcher(object):
         return result
 
 
-from datetime import tzinfo, timedelta, datetime
 
 
 # A UTC class.
@@ -42,3 +44,6 @@ class UTC(tzinfo):
         return self.ZERO
 
 utc = UTC()
+
+def mocked_response(content=None, status_code=200, headers=None):
+    return flexmock(ok=status_code < 400, status_code=status_code, json=lambda: content, raw=content, text=content, headers=headers)
