@@ -265,7 +265,6 @@ class TestClient(unittest.TestCase):
         client = self.make_client("get", 'files/123')
         client.get_file_metadata(123)
 
-
     def test_delete_file(self):
         client = self.make_client("delete", 'files/123')
         result = client.delete_file(123)
@@ -393,7 +392,6 @@ class TestClient(unittest.TestCase):
         result = client.overwrite_file(666, StringIO('hello world'), etag='some_tag',
                                        content_modified_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()))
         self.assertEqual({'id': '1'}, result)
-
 
     def test_copy_file(self):
         client = self.make_client("post", 'files/123/copy', data={'parent': {'id': '666'}}, result={'id': '1'})
@@ -534,7 +532,6 @@ class TestClient(unittest.TestCase):
                 'stream_position': 'some_stream_position',
             }
 
-
             flexmock(client) \
                 .should_receive('_get_long_poll_data') \
                 .and_return(longpoll_response) \
@@ -551,7 +548,6 @@ class TestClient(unittest.TestCase):
                 .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params) \
                 .and_return(mocked_response({'message': 'new_message'})) \
                 .once()
-
 
             position = client.long_poll_for_events(stream_position, stream_type=EventFilter.CHANGES)
             self.assertEqual('some_stream_position', position)

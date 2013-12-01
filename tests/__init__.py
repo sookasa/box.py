@@ -26,8 +26,6 @@ class FileObjMatcher(object):
         return result
 
 
-
-
 # A UTC class.
 class UTC(tzinfo):
     """UTC"""
@@ -44,6 +42,7 @@ class UTC(tzinfo):
         return self.ZERO
 
 utc = UTC()
+
 
 def mocked_response(content=None, status_code=200, headers=None):
     return flexmock(ok=status_code < 400, status_code=status_code, json=lambda: content, raw=content, text=content, headers=headers)

@@ -37,7 +37,6 @@ class TestAuthenticationV1(unittest.TestCase):
 
         self.assertEqual('something_terrible', expected_exception.exception.message)
 
-
         response = mocked_response('<response><status>something_terrible</status></response>')
         flexmock(requests)\
             .should_receive('get')\
@@ -103,10 +102,12 @@ class TestAuthenticationV1(unittest.TestCase):
 
         self.assertEqual('something_terrible', expected_exception.exception.message)
 
+
 class RefreshCallback(object):
 
     def refreshed(self, access_token, refresh_token):
         pass
+
 
 class TestAuthenticationV2(unittest.TestCase):
 
@@ -156,8 +157,6 @@ class TestAuthenticationV2(unittest.TestCase):
         self.assertEqual(credentials._access_token, 'new_access_token')
         self.assertEqual(credentials._refresh_token, 'new_refresh_token')
 
-
-
     def test_start_authenticate_v2(self):
         url = start_authenticate_v2('1111')
         self.assertTrue(url.startswith('https://www.box.com/api/oauth2/authorize?'))
@@ -184,7 +183,6 @@ class TestAuthenticationV2(unittest.TestCase):
             'client_id': ['1111'],
             'redirect_url': ['https://foo.org?a=b']
         }, query)
-
 
     def test_oauth2_token_request(self):
         expected_args = {
@@ -273,6 +271,7 @@ class TestAuthenticationV2(unittest.TestCase):
 
         self.assertEqual('foobar', expected_exception.exception.message)
         self.assertEqual('some_error', expected_exception.exception.error)
+
 
 class TestCredentials(unittest.TestCase):
     def test_credentials_v1(self):
