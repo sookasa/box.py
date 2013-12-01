@@ -5,10 +5,12 @@ For extended specs, see: http://developers.box.com/docs/
 
 from httplib import NOT_FOUND, PRECONDITION_FAILED, CONFLICT, UNAUTHORIZED
 import json
+from os import path
+import time
 from urllib import urlencode
 import urlparse
+
 import requests
-from os import path
 
 
 class EventFilter(object):
@@ -43,11 +45,11 @@ def start_authenticate_v1(api_key):
 
     r = requests.get('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=%s' % api_key)
     if not r.ok:
-        raise BoxAuthenticationException(r.text)
+        raise BoxAuthenticationException(r.status_code, r.text)
 
     content = objectify.fromstring(str(r.text))
     if content.status != 'get_ticket_ok':
-        raise BoxAuthenticationException(content.status.text)
+        raise BoxAuthenticationException(r.status_code, content.status.text)
 
     return 'https://www.box.com/api/1.0/auth/%s' % content.ticket
 
@@ -76,11 +78,11 @@ def finish_authenticate_v1(api_key, ticket):
                                                                  'api_key': api_key,
                                                                  'ticket': ticket})
     if not r.ok:
-        raise BoxAuthenticationException(r.text)
+        raise BoxAuthenticationException(r.status_code, r.text)
 
     content = objectify.fromstring(str(r.text))
     if content.status != 'get_auth_token_ok':
-        raise BoxAuthenticationException(content.status.text)
+        raise BoxAuthenticationException(r.status_code, content.status.text)
 
     return {
         'token': content.auth_token.text,
@@ -135,10 +137,6 @@ def finish_authenticate_v2(client_id, client_secret, code):
 
     """
 
-    if isinstance(code, dict):
-        _handle_response_error(code)
-        code = code['code']
-
     return _oauth2_token_request(client_id, client_secret, 'authorization_code', code=code)
 
 
@@ -171,15 +169,16 @@ def _oauth2_token_request(client_id, client_secret, grant_type, **kwargs):
         'client_secret': client_secret,
         'grant_type': grant_type
     }
-
     args.update(kwargs)
-    response = requests.post('https://www.box.com/api/oauth2/token', args).json()
-    _handle_response_error(response)
-    return response
+    response = requests.post('https://www.box.com/api/oauth2/token', args)
 
-def _handle_response_error(response):
-    if 'error' in response:
-        raise BoxAuthenticationException(message=response.get('error_description'), error=response['error'])
+    return _handle_auth_response(response)
+
+def _handle_auth_response(response):
+    result = response.json()
+    if 'error' in result:
+        raise BoxAuthenticationException(response.status_code, message=result.get('error_description'), error=result['error'])
+    return result
 
 class CredentialsV1(object):
     """
@@ -196,20 +195,58 @@ class CredentialsV1(object):
     def headers(self):
         return {'Authorization': 'BoxAuth api_key={}&auth_token={}'.format(self._api_key, self._access_token)}
 
+    def refresh(self):
+        """
+        V1 credentials cannot be refreshed, but doesn't expire either
+        
+        Always returns False
+        """
+        return False
+
 class CredentialsV2(object):
     """
     v2 credentials
     Args:
-        - access_token: the user access token
+        - access_token: The user access token
+        - refresh_token: The user refresh token (optional)
+        - client_id: The client_id you obtained in the initial setup (optional)
+        - client_secret: The client_secret you obtained in the initial setup (optional)
+        - refresh_call: A method that will be called when the tokens have been refreshed. Should take two arguments, access_token and refresh_token. (optional)
     """
-    def __init__(self, access_token):
+    def __init__(self, access_token, refresh_token=None, client_id=None, client_secret=None, refresh_callback=None):
         self._access_token = access_token
+        self._refresh_token = refresh_token
+        self._client_id = client_id
+        self._client_secret = client_secret
+        self._refresh_callback = refresh_callback
 
     @property
     def headers(self):
         return {'Authorization': 'Bearer {}'.format(self._access_token)}
 
+    def refresh(self):
+        """
+        Refreshes the access token based on the the refresh token, client id and secret if available.
+        
+        Returns True if the refresh was successful, False if the refresh could not be performed, 
+        and raises BoxAuthenticationException if the refresh failed
+        """
+        if not self._refresh_token or not self._client_id or not self._client_secret:
+            return False
+
+        result = refresh_v2_token(self._client_id, self._client_secret, self._refresh_token)
+
+        self._access_token = result["access_token"]
+        if "refresh_token" in result:
+            self._refresh_token = result["refresh_token"]
+        if self._refresh_callback:
+            self._refresh_callback(self._access_token, self._refresh_token)
+
+        return True
+
+
 class BoxClient(object):
+
     def __init__(self, credentials):
         """
         Args:
@@ -218,48 +255,57 @@ class BoxClient(object):
         if not hasattr(credentials, 'headers'):
             credentials = CredentialsV2(credentials)
 
-        self._headers = credentials.headers
+        self.credentials = credentials
 
-    def _handle_error(self, response, object_id=None):
-        if response.ok:
-            return
+    def _check_for_errors(self, response):
+        if not response.ok:
+            exception = EXCEPTION_MAP.get(response.status_code, BoxClientException)
+            raise exception(response.status_code, response.text)
 
-        all_exceptions = {
-            CONFLICT: ItemAlreadyExists,
-            NOT_FOUND: ItemDoesNotExist,
-            PRECONDITION_FAILED: PreconditionFailed,
-            UNAUTHORIZED: BoxAccountUnauthorized
-        }
+    @property
+    def default_headers(self):
+        return self.credentials.headers
 
-        exception = all_exceptions.get(response.status_code)
-        if not exception:
-            exception = BoxClientException
+    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, **kwargs):
+        """
+        Performs a HTTP request to Box. 
+        
+        This method adds authentication headers, and performs error checking on the response. 
+        It also automatically tries to refresh tokens, if possible. 
+        Args:
+            - method: The type of HTTP method, f.ex. get or post
+            - resource: The resource to request (without shared prefix)
+            - params: Any query parameters to send
+            - data: Any data to send. If data is a dict, it will be encoded as json
+            - headers: Any additional headers
+            - endpoint: The endpoint to use, f.ex. api or upload, defaults to api
+            - raw: True if the full response should be returned, otherwise the parsed json body will be returned
+            - try_refresh: True if a refresh of the credentials should be attempted, False otherwise
+            - **kwargs: Any addiitonal arguments to pass to the request
+        """
 
-        raise exception(response.text, object_id)
-
-    def _get(self, resource, query=None, **kwargs):
-        return requests.get('https://api.box.com/2.0/' + resource, params=query, headers=self._headers, **kwargs)
-
-    def _post(self, resource, data=None, **kwargs):
         if isinstance(data, dict):
             data = json.dumps(data)
 
-        return requests.post('https://api.box.com/2.0/' + resource, data, headers=self._headers, **kwargs)
-
-    def _put(self, resource, data=None, **kwargs):
-        if isinstance(data, dict):
-            data = json.dumps(data)
-
-        return requests.put('https://api.box.com/2.0/' + resource, data, headers=self._headers, **kwargs)
-
-    def _delete(self, resource, headers=None, **kwargs):
         if headers:
             headers = dict(headers)
-            headers.update(self._headers)
+            headers.update(self.default_headers)
         else:
-            headers = self._headers
+            headers = self.default_headers
 
-        return requests.delete('https://api.box.com/2.0/' + resource, headers=headers, **kwargs)
+        url = 'https://%s.box.com/2.0/%s' % (endpoint, resource)
+
+        response = requests.request(method, url, params=params, data=data, headers=headers, **kwargs)
+
+        if response.status_code == UNAUTHORIZED and try_refresh and self.credentials.refresh():
+            return self._request(method, resource, params, data, headers, try_refresh=False, **kwargs)
+
+        self._check_for_errors(response)
+
+        if raw:
+            return response
+
+        return response.json()
 
     @classmethod
     def _get_id(cls, identifier):
@@ -273,13 +319,6 @@ class BoxClient(object):
 
         return str(identifier)
 
-    @classmethod
-    def _get_file_metadata_from_response(self, response):
-        """
-        helper method - returns a the file metadata buried inside the response
-        """
-        return response.json()['entries'][0]
-
     def get_user_info(self, username=None):
         """
         Returns info.
@@ -290,75 +329,63 @@ class BoxClient(object):
 
         """
         username = username or 'me'
-        response = self._get('users/' + username)
-        self._handle_error(response)
+        return self._request("get", 'users/' + username)
 
-        return response
-
-    def get_user_list(self, count=100, offset=0):
+    def get_user_list(self, limit=100, offset=0):
         """
         Returns users in an enterprise.
 
         Args:
-            - count: number of users to return. (default=100, max=1000). Optional.
+            - limit: number of users to return. (default=100, max=1000). Optional.
             - offset: The record at which to start. Optional.
         """
 
         params = {
-            'count': count,
+            'limit': limit,
             'offset': offset,
         }
 
-        response = self._get('users/', params)
-        self._handle_error(response)
+        return self._request("get", 'users/', params)
 
-        return response.json()
-
-    def get_folder(self, folder_id, count=100, offset=0, fields=None):
+    def get_folder(self, folder_id, limit=100, offset=0, fields=None):
         """
         Retrieves the metadata of a folder and child directory/files.
 
         Args:
-            - count: (optional) number of items to return. (default=100, max=1000).
+            - limit: (optional) number of items to return. (default=100, max=1000).
             - offset: (optional) The record at which to start
             - fields: (optional) Attribute(s) to include in the response
         """
 
         params = {
-            'count': count,
+            'limit': limit,
             'offset': offset,
         }
 
         if fields:
             params['fields'] = fields
 
-        response = self._get('folders/{}'.format(folder_id), params)
-        self._handle_error(response, folder_id)
+        return self._request("get", 'folders/{}'.format(folder_id), params=params)
 
-        return response.json()
-
-    def get_folder_content(self, folder_id, count=100, offset=0, fields=None):
+    def get_folder_content(self, folder_id, limit=100, offset=0, fields=None):
         """
         Retrieves the files and/or folders contained within this folder without any other metadata about the folder.
 
         Args:
-            - count: (optional) number of items to return. (default=100, max=1000).
+            - limit: (optional) number of items to return. (default=100, max=1000).
             - offset: (optional) The record at which to start
             - fields: (optional) Attribute(s) to include in the response
         """
 
         params = {
-            'count': count,
+            'limit': limit,
             'offset': offset,
         }
 
         if fields:
             params['fields'] = fields
 
-        response = self._get('folders/{}/items'.format(folder_id), params)
-        self._handle_error(response, folder_id)
-
-        return response.json()
+        return self._request("get", 'folders/{}/items'.format(folder_id), params=params)
 
     def get_folder_iterator(self, folder_id):
         """
@@ -367,14 +394,14 @@ class BoxClient(object):
         """
 
         batch_size = 1000
-        content = self.get_folder_content(folder_id, count=batch_size)
+        content = self.get_folder_content(folder_id, limit=batch_size)
         offset = 0
         while content['entries']:
             for entry in content['entries']:
                 yield entry
 
             offset += batch_size
-            content = self.get_folder_content(folder_id, count=batch_size, offset=offset)
+            content = self.get_folder_content(folder_id, limit=batch_size, offset=offset)
 
     def create_folder(self, name, parent=0):
         """
@@ -383,11 +410,10 @@ class BoxClient(object):
         Args:
             - parent: (optional) ID or a Dictionary (as returned by the apis) of the parent folder
         """
-        args = {"name": name}
-        args['parent'] = {'id': self._get_id(parent)}
+        data = {"name": name,
+                'parent': {'id': self._get_id(parent)}}
 
-        response = self._post('folders', args)
-        self._handle_error(response)
+        return self._request("post", 'folders', data=data)
 
     def get_file_metadata(self, file_id):
         """
@@ -398,10 +424,7 @@ class BoxClient(object):
 
         Returns a dictionary with all of the file metadata.
         """
-        response = self._get('files/{}'.format(file_id))
-        self._handle_error(response)
-
-        return response.json()
+        return self._request("get", 'files/{}'.format(file_id))
 
     def delete_file(self, file_id, etag=None):
         """
@@ -416,19 +439,13 @@ class BoxClient(object):
         if etag:
             headers['If-Match'] = etag
 
-        response = self._delete('files/{}'.format(file_id), headers)
-        self._handle_error(response, file_id)
-
-        return response
+        self._request("delete", 'files/{}'.format(file_id), headers=headers)
 
     def delete_trashed_file(self, file_id):
         """
         Permanently deletes an item that is in the trash.
         """
-        response = self._delete('files/{}/trash'.format(file_id))
-        self._handle_error(response, file_id)
-
-        return response
+        self._request("delete", 'files/{}/trash'.format(file_id))
 
     def download_file(self, file_id, version=None):
         """
@@ -441,13 +458,55 @@ class BoxClient(object):
         Returns a file-like object to the file content
         """
 
-        query = {}
+        params = {}
         if version:
-            query['version'] = version
+            params['version'] = version
 
-        response = self._get('files/{}/content'.format(file_id), query=query, stream=True)
-        self._handle_error(response)
-        return response.raw
+        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True, raw=True).raw
+
+    def get_thumbnail(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None, max_wait=0):
+        """
+        Downloads a file
+
+        Args:
+            - file_id: The ID of the file to download.
+            - extension:  Currently thumbnails are only available png
+            - min_height: (optional) The minimum height of the thumbnail.
+            - max_height: (optional) The maximum height of the thumbnail
+            - min_width: (optional) The minimum width of the thumbnail
+            - max_width: (optional) The maximum width of the thumbnail
+
+        Returns a file-like object to the file content
+        """
+
+        params = {}
+        if min_height is not None:
+            params['min_height'] = min_height
+        if max_height is not None:
+            params['max_height'] = max_height
+        if min_width is not None:
+            params['min_width'] = min_width
+        if max_width is not None:
+            params['max_width'] = max_width
+
+        response = self._request("get", 'files/{}/thumbnail.{}'.format(file_id, extension), params=params, raw=True)
+        if response.status_code == 202:
+            # Thumbnail not ready yet
+            ready_in_seconds = int(response.headers["Retry-After"])
+            if ready_in_seconds > max_wait:
+                return None
+
+            # Wait for the thumbnail to get ready
+            time.sleep(ready_in_seconds)
+
+            response = requests.get(response.headers["Location"], headers=self.default_headers)
+            self._check_for_errors(response)
+            return response.raw
+        elif response.status_code == 302:
+            # No thumbnail available
+            return None
+        else:
+            return response.raw
 
     def upload_file(self, filename, fileobj, parent=0):
         """
@@ -463,35 +522,27 @@ class BoxClient(object):
         form = {"parent_id": self._get_id(parent)}
 
         # usually Box goes with data==json, but here they want headers (as per standard http form)
-        response = requests.post('https://upload.box.com/api/2.0/files/content',
-                                 headers=self._headers,
-                                 data=form,
-                                 files={filename: fileobj})
-
-        self._handle_error(response, filename)
-        return self._get_file_metadata_from_response(response)
+        result = self._request("post", "files/content", endpoint="upload", data=form, files={filename: fileobj})
+        return result['entries'][0]
 
     def overwrite_file(self, file_id, fileobj, etag=None, content_modified_at=None):
         """
         Uploads a file that will overwrite an existing one. The file_id must exist on the server.
         """
-        headers = dict(self._headers)
+        headers = {}
         if etag:
             headers['If-Match'] = etag
 
         if content_modified_at:
             headers['content_modified_at'] = content_modified_at.isoformat()
 
-        response = requests.post('https://upload.box.com/api/2.0/files/{}/content'.format(file_id),
-                                 headers=headers,
-                                 files={'file': fileobj})
-
-        self._handle_error(response, file_id)
-        return self._get_file_metadata_from_response(response)
+        result = self._request("post", 'files/{}/content'.format(file_id), headers=headers, endpoint="upload", files={'file': fileobj})
+        return result['entries'][0]
 
     def copy_file(self, file_id, destination_parent, new_filename=None):
         """
         Copies a file
+        @see http://developers.box.com/docs/#files-copy-a-file
 
         Args:
             - file_id: the id of the file we want to copy
@@ -502,16 +553,13 @@ class BoxClient(object):
             - a dictionary with the new file metadata
         """
 
-        args = {'parent': {'id': self._get_id(destination_parent)}}
+        data = {'parent': {'id': self._get_id(destination_parent)}}
         if new_filename:
-            args['name'] = new_filename
+            data['name'] = new_filename
 
-        response = self._post('files/{}/copy'.format(file_id), args)
-        self._handle_error(response, file_id)
+        return self._request("post", 'files/{}/copy'.format(file_id), data=data)
 
-        return response
-
-    def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=True, can_preview=True):
+    def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=None, can_preview=None):
         """
         Creates a share link for the file_id
         Args:
@@ -539,20 +587,22 @@ class BoxClient(object):
                 }
             }
         """
-        args = {
-            'access': access,
-            'permissions': {'can_download': can_download,
-                            'can_preview': can_preview
-                            }
+        data = {
+            'access': access
         }
 
+        if can_download is not None or can_preview is not None:
+            data['permissions'] = {}
+            if can_download is not None:
+                data['permissions']['can_download'] = can_download
+            if can_preview is not None:
+                data['permissions']['can_preview'] = can_preview
+
         if expire_at:
-            args['unshared_at'] = expire_at.isoformat()
+            data['unshared_at'] = expire_at.isoformat()
 
-        response = self._put('files/{}'.format(file_id), {'shared_link': args})
-        self._handle_error(response, file_id)
-
-        return response.json()['shared_link']
+        result = self._request("put", 'files/{}'.format(file_id), data={'shared_link': data})
+        return result['shared_link']
 
     def get_events(self, stream_position='0', stream_type=EventFilter.ALL, limit=1000):
         """
@@ -569,16 +619,13 @@ class BoxClient(object):
             - a dictionary containing metadata & the events
         """
 
-        query = {
+        params = {
             'stream_position': str(stream_position),
             'stream_type': stream_type,
             'limit': limit
         }
 
-        response = self._get('events', query)
-        self._handle_error(response)
-
-        return response.json()
+        return self._request("get", 'events', params)
 
     def long_poll_for_events(self, stream_position=None, stream_type=EventFilter.ALL):
         """
@@ -602,10 +649,10 @@ class BoxClient(object):
             query['stream_position'] = stream_position
             query['stream_type'] = stream_type
             response = requests.get(url, params=query)
-            self._handle_error(response)
+            self._check_for_errors(response)
+            result = response.json()
 
-            poll_result = response.json()['message']
-            if poll_result in ['new_message', 'new_change']:
+            if result['message'] in ['new_message', 'new_change']:
                 return stream_position
 
     def _get_long_poll_data(self):
@@ -614,11 +661,8 @@ class BoxClient(object):
         See http://developers.box.com/using-long-polling-to-monitor-events/ for details.
         """
 
-        response = requests.options('https://api.box.com/2.0/events', headers=self._headers)
-        self._handle_error(response)
-
-        poll_data = response.json()['entries'][0]
-        return poll_data
+        result = self._request('options', "events")
+        return result['entries'][0]
 
     @staticmethod
     def get_path_of_file(file_metadata):
@@ -638,12 +682,30 @@ class BoxClient(object):
 
         return path.join(directory, file_metadata['name'])
 
+    def search(self, query, limit=30, offset=0):
+        """
+        The search endpoint provides a simple way of finding items that are accessible in a given user's Box account.
+
+        Args:
+            - query: The string to search for; can be matched against item names, descriptions, text content of a file, and other fields of the different item types.
+            - limit: (optional) number of items to return. (default=30, max=200).
+            - offset: (optional) The record at which to start
+        """
+
+        params = {
+            'query': query,
+            'limit': limit,
+            'offset': offset,
+        }
+
+        return self._request("get", 'search', params)
+
 
 class BoxClientException(Exception):
-    def __init__(self, message=None, object_id=None, **kwargs):
+    def __init__(self, status_code, message=None, **kwargs):
         super(BoxClientException, self).__init__(message)
+        self.status_code = status_code
         self.message = message
-        self.object_id = object_id
         self.__dict__.update(kwargs)
 
 
@@ -665,3 +727,11 @@ class BoxAuthenticationException(BoxClientException):
 
 class BoxAccountUnauthorized(BoxClientException):
     pass
+
+
+EXCEPTION_MAP = {
+    CONFLICT: ItemAlreadyExists,
+    NOT_FOUND: ItemDoesNotExist,
+    PRECONDITION_FAILED: PreconditionFailed,
+    UNAUTHORIZED: BoxAccountUnauthorized
+}
