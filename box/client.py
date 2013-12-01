@@ -53,6 +53,7 @@ def start_authenticate_v1(api_key):
 
     return 'https://www.box.com/api/1.0/auth/%s' % content.ticket
 
+
 def finish_authenticate_v1(api_key, ticket):
     """
     Exchanges the ticket for an auth token. Should be called after the redirect completes.
@@ -89,6 +90,7 @@ def finish_authenticate_v1(api_key, ticket):
         'user': {x.tag: x.pyval for x in content.user.iterchildren()}
     }
 
+
 def start_authenticate_v2(client_id, state=None, redirect_uri=None):
     """
     Returns a url to redirect the client to.
@@ -115,6 +117,7 @@ def start_authenticate_v2(client_id, state=None, redirect_uri=None):
 
     return 'https://www.box.com/api/oauth2/authorize?' + urlencode(args)
 
+
 def finish_authenticate_v2(client_id, client_secret, code):
     """
     finishes the authentication flow. See http://developers.box.com/oauth/ for details.
@@ -140,7 +143,6 @@ def finish_authenticate_v2(client_id, client_secret, code):
     return _oauth2_token_request(client_id, client_secret, 'authorization_code', code=code)
 
 
-
 def refresh_v2_token(client_id, client_secret, refresh_token):
     """
     Returns a new access_token & refresh_token from an existing refresh_token
@@ -160,6 +162,7 @@ def refresh_v2_token(client_id, client_secret, refresh_token):
     """
     return _oauth2_token_request(client_id, client_secret, 'refresh_token', refresh_token=refresh_token)
 
+
 def _oauth2_token_request(client_id, client_secret, grant_type, **kwargs):
     """
     Performs an oauth2 request against Box
@@ -174,11 +177,13 @@ def _oauth2_token_request(client_id, client_secret, grant_type, **kwargs):
 
     return _handle_auth_response(response)
 
+
 def _handle_auth_response(response):
     result = response.json()
     if 'error' in result:
         raise BoxAuthenticationException(response.status_code, message=result.get('error_description'), error=result['error'])
     return result
+
 
 class CredentialsV1(object):
     """
@@ -198,10 +203,11 @@ class CredentialsV1(object):
     def refresh(self):
         """
         V1 credentials cannot be refreshed, but doesn't expire either
-        
+
         Always returns False
         """
         return False
+
 
 class CredentialsV2(object):
     """
@@ -227,8 +233,8 @@ class CredentialsV2(object):
     def refresh(self):
         """
         Refreshes the access token based on the the refresh token, client id and secret if available.
-        
-        Returns True if the refresh was successful, False if the refresh could not be performed, 
+
+        Returns True if the refresh was successful, False if the refresh could not be performed,
         and raises BoxAuthenticationException if the refresh failed
         """
         if not self._refresh_token or not self._client_id or not self._client_secret:
@@ -268,10 +274,10 @@ class BoxClient(object):
 
     def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, **kwargs):
         """
-        Performs a HTTP request to Box. 
-        
-        This method adds authentication headers, and performs error checking on the response. 
-        It also automatically tries to refresh tokens, if possible. 
+        Performs a HTTP request to Box.
+
+        This method adds authentication headers, and performs error checking on the response.
+        It also automatically tries to refresh tokens, if possible.
         Args:
             - method: The type of HTTP method, f.ex. get or post
             - resource: The resource to request (without shared prefix)
