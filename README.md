@@ -14,13 +14,15 @@ client.upload_file('hello.txt', StringIO('hello world'))
 ```
 
 
-Currently supported features
+Supported features
 ----------------------------
 - File download, upload and overwrite.
 - Delete (including permanent delete), copy, move & restore
 - Directory enumeration
 - Link share
 - User info fetch
+- Thumbnails
+- Search
 - Events + longpoll
 
 
@@ -103,7 +105,13 @@ response = finish_authenticate_v2('my_client_id', 'my_client_secret', request.RE
 client = BoxClient(response['access_token'])
 ```
 
-You will need to refresh the token (according to the "expires_in" field) on occassion:
+### Token refresh
+The v2 security API introduces a mandatory token refresh mechanism (according to Box, this was done to mitigate the impact of token theft).  
+Essentially, every so often, the token needs to be "refreshed", which involves hitting a Box endpoint with a special "refresh token", which returns new access  & refresh tokens that replace the old ones.  
+For more details, see here: http://developers.box.com/oauth/
+
+
+The refresh dance can be performed explicitly as following:
 ```python
 from box import refresh_v2_token
 response = refresh_v2_token('my_client_id', 'my_client_secret', 'my_refresh_token')
@@ -116,3 +124,18 @@ response = refresh_v2_token('my_client_id', 'my_client_secret', 'my_refresh_toke
 }
 ```
 
+This can also be done automatically by the client, and you can register a callback that will notify you about the new tokens:
+```python
+def token_refreshed_callback(access_token, refresh_token):
+	"""
+	this gets called whenever the tokens have been refreshed. Should persist those somewhere.
+	"""
+	print 'new access token: ' + access_token
+	print 'new refresh token: ' + refresh_token
+
+
+from box import CredentialsV2
+credentials = CredentialsV2('my_access_token', 'my_refresh_token', 'my_client_id', 'my_client_secret', refresh_callback=token_refreshed_callback)
+client = BoxClient(credentials)
+
+client.download_file(....) # if the tokens have expired, they will be refreshed automatically and token_refreshed_callback would get invoked
