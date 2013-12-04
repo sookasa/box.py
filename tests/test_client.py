@@ -29,12 +29,15 @@ class TestClient(unittest.TestCase):
         else:
             headers = client.default_headers
 
+        if isinstance(data, dict):
+            data = json.dumps(data)
+
         flexmock(requests) \
             .should_receive('request') \
             .with_args(method,
                        'https://%s.box.com/2.0/%s' % (endpoint, path),
                        params=params,
-                       data=json.dumps(data) if isinstance(data, dict) else data,
+                       data=data,
                        headers=headers,
                        **kwargs) \
             .and_return(mocked_response(result)) \
@@ -373,24 +376,65 @@ class TestClient(unittest.TestCase):
         self.assertEqual('Thumbnail contents', thumbnail.read())
 
     def test_upload_file(self):
-        client = self.make_client("post", "files/content", endpoint="upload", data={'parent_id': '666'}, files={'hello.jpg': FileObjMatcher('hello world')},
-                                  result={"entries": [{"id": "1"}]})
+        client = BoxClient('my_token')
+        flexmock(client) \
+            .should_receive('_check_for_errors') \
+            .once()
+
+        response = mocked_response({'entries': [{'id': '1'}]})
+        flexmock(requests) \
+            .should_receive('post') \
+            .with_args('https://upload.box.com/api/2.0/files/content',
+                       headers=client.default_headers,
+                       data={'parent_id': '666'},
+                       files={'hello.jpg': FileObjMatcher('hello world')}) \
+            .and_return(response) \
+            .once()
+
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent=666)
         self.assertEqual({'id': '1'}, result)
 
     def test_upload_file_with_parent_as_dict(self):
-        client = self.make_client("post", "files/content", data={'parent_id': '666'},
-                                  files={'hello.jpg': FileObjMatcher('hello world')}, result={"entries": [{"id": "1"}]}, endpoint="upload")
+        client = BoxClient('my_token')
+        flexmock(client) \
+            .should_receive('_check_for_errors') \
+            .once()
+
+        response = mocked_response({'entries': [{'id': '1'}]})
+        flexmock(requests) \
+            .should_receive('post') \
+            .with_args('https://upload.box.com/api/2.0/files/content',
+                       headers=client.default_headers,
+                       data={'parent_id': '666'},
+                       files={'hello.jpg': FileObjMatcher('hello world')}) \
+            .and_return(response) \
+            .once()
+
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent={'id': 666})
         self.assertEqual({'id': '1'}, result)
 
     def test_overwrite_file(self):
+        client = BoxClient('my_token')
+
+        flexmock(client) \
+            .should_receive('_check_for_errors') \
+            .once()
+
         expected_headers = {'content_modified_at': '2006-05-04T03:02:01+00:00',
                             'If-Match': 'some_tag'}
+        expected_headers.update(client.default_headers)
 
-        client = self.make_client("post", "files/666/content", headers=expected_headers, files={'file': FileObjMatcher('hello world')}, endpoint="upload", result={"entries": [{"id": "1"}]})
+        expected_response = mocked_response({'entries': [{'id': '1'}]})
+        flexmock(requests) \
+            .should_receive('post') \
+            .with_args('https://upload.box.com/api/2.0/files/666/content',
+                       headers=expected_headers,
+                       files={'file': FileObjMatcher('hello world')}) \
+            .and_return(expected_response) \
+            .once()
+
         result = client.overwrite_file(666, StringIO('hello world'), etag='some_tag',
-                                       content_modified_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()))
+                                       content_modified_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()),)
         self.assertEqual({'id': '1'}, result)
 
     def test_copy_file(self):

@@ -272,7 +272,7 @@ class BoxClient(object):
     def default_headers(self):
         return self.credentials.headers
 
-    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, **kwargs):
+    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, auto_json=True, **kwargs):
         """
         Performs a HTTP request to Box.
 
@@ -282,15 +282,16 @@ class BoxClient(object):
             - method: The type of HTTP method, f.ex. get or post
             - resource: The resource to request (without shared prefix)
             - params: Any query parameters to send
-            - data: Any data to send. If data is a dict, it will be encoded as json
+            - data: Any data to send. If data is a dict and auto_json is True, it will be encoded as json.
             - headers: Any additional headers
             - endpoint: The endpoint to use, f.ex. api or upload, defaults to api
             - raw: True if the full response should be returned, otherwise the parsed json body will be returned
             - try_refresh: True if a refresh of the credentials should be attempted, False otherwise
+            - auto_json: should data be json-ified automatically.
             - **kwargs: Any addiitonal arguments to pass to the request
         """
 
-        if isinstance(data, dict):
+        if auto_json and isinstance(data, dict):
             data = json.dumps(data)
 
         if headers:
@@ -528,22 +529,31 @@ class BoxClient(object):
         form = {"parent_id": self._get_id(parent)}
 
         # usually Box goes with data==json, but here they want headers (as per standard http form)
-        result = self._request("post", "files/content", endpoint="upload", data=form, files={filename: fileobj})
-        return result['entries'][0]
+        response = requests.post('https://upload.box.com/api/2.0/files/content',
+                                 headers=self.default_headers,
+                                 data=form,
+                                 files={filename: fileobj})
+
+        self._check_for_errors(response)
+        return response.json()['entries'][0]
 
     def overwrite_file(self, file_id, fileobj, etag=None, content_modified_at=None):
         """
         Uploads a file that will overwrite an existing one. The file_id must exist on the server.
         """
-        headers = {}
+        headers = dict(self.default_headers)
         if etag:
             headers['If-Match'] = etag
 
         if content_modified_at:
             headers['content_modified_at'] = content_modified_at.isoformat()
 
-        result = self._request("post", 'files/{}/content'.format(file_id), headers=headers, endpoint="upload", files={'file': fileobj})
-        return result['entries'][0]
+        response = requests.post('https://upload.box.com/api/2.0/files/{}/content'.format(file_id),
+                                 headers=headers,
+                                 files={'file': fileobj})
+
+        self._check_for_errors(response)
+        return response.json()['entries'][0]
 
     def copy_file(self, file_id, destination_parent, new_filename=None):
         """
