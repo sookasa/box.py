@@ -448,6 +448,24 @@ class BoxClient(object):
 
         self._request("delete", 'files/{}'.format(file_id), headers=headers)
 
+
+    def delete_folder(self, folder_id, etag=None, recursive=False):
+        """
+        Discards a folder to the trash.
+
+        Args:
+            - etag: (optional) If specified, the folder will only be deleted if
+                    its etag matches the parameter
+            - recursive: (optional) If False, the folder will not be deleted
+					if it contains files.
+        """
+
+        headers = {}
+        if etag:
+            headers['If-Match'] = etag
+
+        self._request("delete", 'folders/{}?recursive={}'.format(folder_id, recursive), headers=headers, raw=True)
+
     def delete_trashed_file(self, file_id):
         """
         Permanently deletes an item that is in the trash.
