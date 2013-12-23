@@ -113,7 +113,7 @@ def start_authenticate_v2(client_id, state=None, redirect_uri=None):
         args['state'] = state
 
     if redirect_uri:
-        args['redirect_url'] = redirect_uri
+        args['redirect_uri'] = redirect_uri
 
     return 'https://www.box.com/api/oauth2/authorize?' + urlencode(args)
 
