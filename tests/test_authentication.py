@@ -181,7 +181,7 @@ class TestAuthenticationV2(unittest.TestCase):
         self.assertDictEqual({
             'response_type': ['code'],
             'client_id': ['1111'],
-            'redirect_url': ['https://foo.org?a=b']
+            'redirect_uri': ['https://foo.org?a=b']
         }, query)
 
     def test_oauth2_token_request(self):
