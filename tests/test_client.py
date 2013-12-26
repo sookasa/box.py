@@ -277,6 +277,27 @@ class TestClient(unittest.TestCase):
         result = client.delete_file(123, etag='deadbeef')
         self.assertIsNone(result)
 
+    def test_delete_folder(self):
+        client = self.make_client('delete', 'folders/123', params={})
+        result = client.delete_folder(123)
+        self.assertIsNone(result)
+
+        client = self.make_client('delete', 'folders/123', params={})
+        result = client.delete_folder(123, recursive=False)
+        self.assertIsNone(result)
+
+        client = self.make_client('delete', 'folders/123', params={'recursive': 'true'})
+        result = client.delete_folder(123, recursive=True)
+        self.assertIsNone(result)
+
+        client = self.make_client('delete', 'folders/123', headers={'If-Match': 'deadbeef'}, params={})
+        result = client.delete_folder(123, etag='deadbeef')
+        self.assertIsNone(result)
+
+        client = self.make_client('delete', 'folders/123', headers={'If-Match': 'deadbeef'}, params={'recursive': 'true'})
+        result = client.delete_folder(123, etag='deadbeef', recursive=True)
+        self.assertIsNone(result)
+
     def test_delete_trashed_file(self):
         client = self.make_client("delete", 'files/123/trash')
 
