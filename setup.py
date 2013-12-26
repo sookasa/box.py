@@ -15,7 +15,7 @@ INSTALL_REQUIRES = [
 
 setup(
     name='box.py',
-    version='1.2.2',
+    version='1.2.3',
     author='Sookasa',
     author_email='dev@sookasa.com',
     url='http://github.com/sookasa/box.py',
