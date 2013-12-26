@@ -5,7 +5,6 @@ For extended specs, see: http://developers.box.com/docs/
 
 from httplib import NOT_FOUND, PRECONDITION_FAILED, CONFLICT, UNAUTHORIZED
 import json
-from os import path
 import time
 from urllib import urlencode
 import urlparse
@@ -713,9 +712,8 @@ class BoxClient(object):
 
         # skip over first part, which is 'All Files'
         path_parts = [x['name'].strip('/') for x in file_metadata['path_collection']['entries'][1:]]
-        directory = '/' + '/'.join(path_parts)
-
-        return path.join(directory, file_metadata['name'])
+        path_parts.append(file_metadata['name'])
+        return '/' + '/'.join(path_parts)
 
     def search(self, query, limit=30, offset=0):
         """
