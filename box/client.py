@@ -448,7 +448,6 @@ class BoxClient(object):
 
         self._request("delete", 'files/{}'.format(file_id), headers=headers)
 
-
     def delete_folder(self, folder_id, etag=None, recursive=False):
         """
         Discards a folder to the trash.
@@ -464,7 +463,12 @@ class BoxClient(object):
         if etag:
             headers['If-Match'] = etag
 
-        self._request("delete", 'folders/{}?recursive={}'.format(folder_id, recursive), headers=headers, raw=True)
+        params = {}
+        if recursive:
+            params['recursive'] = 'true'
+
+        self._request("delete", 'folders/{}'.format(folder_id),
+                headers=headers, params=params, raw=True)
 
     def delete_trashed_file(self, file_id):
         """
