@@ -453,10 +453,8 @@ class BoxClient(object):
         Discards a folder to the trash.
 
         Args:
-            - etag: (optional) If specified, the folder will only be deleted if
-                    its etag matches the parameter
-            - recursive: (optional) If False, the folder will not be deleted
-					if it contains files.
+            - etag: (optional) If specified, the folder will only be deleted if its etag matches the parameter
+            - recursive: (optional) If False, the folder will not be deleted if it contains files.
         """
 
         headers = {}
@@ -467,8 +465,7 @@ class BoxClient(object):
         if recursive:
             params['recursive'] = 'true'
 
-        self._request("delete", 'folders/{}'.format(folder_id),
-                headers=headers, params=params, raw=True)
+        self._request("delete", 'folders/{}'.format(folder_id), headers=headers, params=params, raw=True)
 
     def delete_trashed_file(self, file_id):
         """
@@ -725,7 +722,8 @@ class BoxClient(object):
         The search endpoint provides a simple way of finding items that are accessible in a given user's Box account.
 
         Args:
-            - query: The string to search for; can be matched against item names, descriptions, text content of a file, and other fields of the different item types.
+            - query: The string to search for; can be matched against item names, descriptions, text content of a file,
+                     and other fields of the different item types.
             - limit: (optional) number of items to return. (default=30, max=200).
             - offset: (optional) The record at which to start
         """
