@@ -305,14 +305,14 @@ class TestClient(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_download_file(self):
-        client = self.make_client("get", "files/123/content", params={}, result=StringIO('hello world'), stream=True)
-        downloaded_file = client.download_file(123)
-        self.assertEqual('hello world', downloaded_file.read())
+        client = self.make_client("get", "files/123/content", params={}, result='hello world', stream=True)
+        response = client.download_file(123)
+        self.assertEqual('hello world', response.text)
 
     def test_download_file_with_version(self):
-        client = self.make_client("get", "files/123/content", params={'version': 1000}, result=StringIO('hello world'), stream=True)
-        downloaded_file = client.download_file(123, 1000)
-        self.assertEqual('hello world', downloaded_file.read())
+        client = self.make_client("get", "files/123/content", params={'version': 1000}, result='hello world', stream=True)
+        response = client.download_file(123, 1000)
+        self.assertEqual('hello world', response.text)
 
     def test_get_thumbnail(self):
         client = BoxClient("my_token")

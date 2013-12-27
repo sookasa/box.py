@@ -51,8 +51,8 @@ metadata = client.upload_file('hello.txt', StringIO('hello world'))
 Downloading a file
 ------------------
 ```python
-data = client.download_file('123456')
->>> data.read()
+response = client.download_file('123456')
+>>> response.text
 'hello world'
 ```
 

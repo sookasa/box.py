@@ -479,14 +479,15 @@ class BoxClient(object):
             - file_id: The ID of the file to download.
             - version: (optional) The ID specific version of this file to download.
 
-        Returns a file-like object to the file content
+        Returns:
+            - Request's response object
         """
 
         params = {}
         if version:
             params['version'] = version
 
-        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True, raw=True).raw
+        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True, raw=True)
 
     def get_thumbnail(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None, max_wait=0):
         """
