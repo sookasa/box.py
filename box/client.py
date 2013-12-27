@@ -271,7 +271,7 @@ class BoxClient(object):
     def default_headers(self):
         return self.credentials.headers
 
-    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, auto_json=True, **kwargs):
+    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, **kwargs):
         """
         Performs a HTTP request to Box.
 
@@ -281,16 +281,15 @@ class BoxClient(object):
             - method: The type of HTTP method, f.ex. get or post
             - resource: The resource to request (without shared prefix)
             - params: Any query parameters to send
-            - data: Any data to send. If data is a dict and auto_json is True, it will be encoded as json.
+            - data: Any data to send. If data is a dict, it will be encoded as json.
             - headers: Any additional headers
             - endpoint: The endpoint to use, f.ex. api or upload, defaults to api
             - raw: True if the full response should be returned, otherwise the parsed json body will be returned
             - try_refresh: True if a refresh of the credentials should be attempted, False otherwise
-            - auto_json: should data be json-ified automatically.
             - **kwargs: Any addiitonal arguments to pass to the request
         """
 
-        if auto_json and isinstance(data, dict):
+        if isinstance(data, dict):
             data = json.dumps(data)
 
         if headers:
