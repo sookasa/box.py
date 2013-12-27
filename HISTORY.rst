@@ -23,7 +23,8 @@ Release History
 
 1.2
 +++
-A ton of stuff, courtesy of @holm
+A ton of stuff, courtesy of @holm   
+  
 - auto-refreshing for tokens
 - lots of bugfixes
 - thumbnails
