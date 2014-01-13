@@ -413,8 +413,8 @@ class TestClient(unittest.TestCase):
         flexmock(requests) \
             .should_receive('post') \
             .with_args('https://upload.box.com/api/2.0/files/content',
+                       {'parent_id': '666'},
                        headers=client.default_headers,
-                       data={'parent_id': '666'},
                        files={'hello.jpg': FileObjMatcher('hello world')}) \
             .and_return(response) \
             .once()
@@ -422,21 +422,46 @@ class TestClient(unittest.TestCase):
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent=666)
         self.assertEqual({'id': '1'}, result)
 
+    def test_upload_file_with_timestamps(self):
+        client = BoxClient('my_token')
+        response = mocked_response({'entries': [{'id': '1'}]})
+
+        (flexmock(client)
+            .should_receive('_check_for_errors')
+            .once())
+        (flexmock(requests)
+            .should_receive('post')
+            .with_args('https://upload.box.com/api/2.0/files/content',
+                       {
+                           'parent_id': '666',
+                           'content_modified_at': '2007-05-04T03:02:01+00:00',
+                           'content_created_at': '2006-05-04T03:02:01+00:00'
+                       },
+                       headers=client.default_headers,
+                       files={'hello.jpg': FileObjMatcher('hello world')})
+            .and_return(response)
+            .once())
+
+        result = client.upload_file('hello.jpg', StringIO('hello world'), parent=666,
+                                    content_created_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()),
+                                    content_modified_at=datetime(2007, 5, 4, 3, 2, 1, 0, tzinfo=UTC()))
+        self.assertEqual({'id': '1'}, result)
+
     def test_upload_file_with_parent_as_dict(self):
         client = BoxClient('my_token')
-        flexmock(client) \
-            .should_receive('_check_for_errors') \
-            .once()
+        (flexmock(client)
+            .should_receive('_check_for_errors')
+            .once())
 
         response = mocked_response({'entries': [{'id': '1'}]})
-        flexmock(requests) \
-            .should_receive('post') \
+        (flexmock(requests)
+            .should_receive('post')
             .with_args('https://upload.box.com/api/2.0/files/content',
+                       {'parent_id': '666'},
                        headers=client.default_headers,
-                       data={'parent_id': '666'},
-                       files={'hello.jpg': FileObjMatcher('hello world')}) \
-            .and_return(response) \
-            .once()
+                       files={'hello.jpg': FileObjMatcher('hello world')})
+            .and_return(response)
+            .once())
 
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent={'id': 666})
         self.assertEqual({'id': '1'}, result)
@@ -444,9 +469,9 @@ class TestClient(unittest.TestCase):
     def test_overwrite_file(self):
         client = BoxClient('my_token')
 
-        flexmock(client) \
-            .should_receive('_check_for_errors') \
-            .once()
+        (flexmock(client)
+            .should_receive('_check_for_errors')
+            .once())
 
         expected_headers = {'content_modified_at': '2006-05-04T03:02:01+00:00',
                             'If-Match': 'some_tag'}
@@ -576,11 +601,11 @@ class TestClient(unittest.TestCase):
             'entries': [expected_response],
         })
 
-        flexmock(requests) \
-            .should_receive('request') \
-            .with_args('options', 'https://api.box.com/2.0/events', headers=client.default_headers, data=None, params=None) \
-            .and_return(response) \
-            .once()
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args('options', 'https://api.box.com/2.0/events', headers=client.default_headers, data=None, params=None)
+            .and_return(response)
+            .once())
 
         actual_response = client._get_long_poll_data()
         self.assertDictEqual(expected_response, actual_response)

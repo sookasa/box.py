@@ -2,6 +2,7 @@
 A client library for working with Box's v2 API.
 For extended specs, see: http://developers.box.com/docs/
 """
+from datetime import datetime
 
 from httplib import NOT_FOUND, PRECONDITION_FAILED, CONFLICT, UNAUTHORIZED
 import json
@@ -348,11 +349,12 @@ class BoxClient(object):
 
         return self._request("get", 'users/', params).json()
 
-    def get_folder(self, folder_id, limit=100, offset=0, fields=None):
+    def get_folder(self, folder_id=0, limit=100, offset=0, fields=None):
         """
         Retrieves the metadata of a folder and child directory/files.
 
         Args:
+            - folder_id: the id of the folder you wish to query. No you can use paths :(
             - limit: (optional) number of items to return. (default=100, max=1000).
             - offset: (optional) The record at which to start
             - fields: (optional) Attribute(s) to include in the response
@@ -368,11 +370,12 @@ class BoxClient(object):
 
         return self._request("get", 'folders/{}'.format(folder_id), params=params).json()
 
-    def get_folder_content(self, folder_id, limit=100, offset=0, fields=None):
+    def get_folder_content(self, folder_id=0, limit=100, offset=0, fields=None):
         """
         Retrieves the files and/or folders contained within this folder without any other metadata about the folder.
 
         Args:
+            - folder_id: the id of the folder you wish to query. No you can use paths :(
             - limit: (optional) number of items to return. (default=100, max=1000).
             - offset: (optional) The record at which to start
             - fields: (optional) Attribute(s) to include in the response
@@ -529,7 +532,7 @@ class BoxClient(object):
         else:
             return response.raw
 
-    def upload_file(self, filename, fileobj, parent=0):
+    def upload_file(self, filename, fileobj, parent=0, content_created_at=None, content_modified_at=None):
         """
         Uploads a file. If the file already exists, ItemAlreadyExists is raised.
 
@@ -538,14 +541,24 @@ class BoxClient(object):
                         raised.
             - fileobj: a fileobj-like object that contains the data to upload
             - parent: (optional) ID or a Dictionary (as returned by the apis) of the parent folder
+            - content_modified_at: (optional) a timestamp (datetime or a properly formatted string) of the time the
+              content was created
+            - content_modified_at: (optional) a timestamp (datetime or a properly formatted string) of the time the
+              content was last modified
         """
 
         form = {"parent_id": self._get_id(parent)}
 
+        if content_created_at:
+            form['content_created_at'] = content_created_at.isoformat() if isinstance(content_created_at, datetime) else content_created_at
+
+        if content_created_at:
+            form['content_modified_at'] = content_modified_at.isoformat() if isinstance(content_modified_at, datetime) else content_modified_at
+
         # usually Box goes with data==json, but here they want headers (as per standard http form)
         response = requests.post('https://upload.box.com/api/2.0/files/content',
+                                 form,
                                  headers=self.default_headers,
-                                 data=form,
                                  files={filename: fileobj})
 
         self._check_for_errors(response)
@@ -560,7 +573,7 @@ class BoxClient(object):
             headers['If-Match'] = etag
 
         if content_modified_at:
-            headers['content_modified_at'] = content_modified_at.isoformat()
+            headers['content_modified_at'] = content_modified_at.isoformat() if isinstance(content_modified_at, datetime) else content_modified_at
 
         response = requests.post('https://upload.box.com/api/2.0/files/{}/content'.format(file_id),
                                  headers=headers,
