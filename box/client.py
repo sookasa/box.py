@@ -619,8 +619,8 @@ class BoxClient(object):
             - access: one of the values of ShareAccess
             - expire_at: (optional) a datetime representing the time the link will expire. Timestamps are rounded off
               to the given day.
-            - can_download: allows downloading of the file.
-            - can_preview: allows the file to the previewed.
+            - can_download: Whether this link allows downloads. Can only be used with Open and Company
+            - can_preview: Whether this link allows previewing. Can only be used with Open and Company
 
         Returns:
             - a dictionary containing the various urls. Example:
