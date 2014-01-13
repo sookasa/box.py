@@ -3,6 +3,12 @@
 Release History
 ---------------
 
+1.2.5
++++++
+- Fixed issue with delete_file raising an exception after deletion.
+- Added content_created_at/content_modified_at to upload_file()
+- Fixed content_modified_at in overwrite_file()
+
 1.2.4
 +++++
 - Changed download() to return a requests.models.Response object rather than a fileobj. This makes it more convenient to
