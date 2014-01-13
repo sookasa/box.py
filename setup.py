@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-
+import platform
 
 TEST_REQUIRES = [
     'flexmock>=0.9.7',
@@ -10,8 +10,21 @@ TEST_REQUIRES = [
 
 INSTALL_REQUIRES = [
     'requests>=1.0.0',
+]
+INSTALL_REQUIRES_CPYTHON = [
     'lxml>=3.0',
 ]
+
+# lxml betas (and possibly future releases?) are broken with pypy. lets see how this plays out...
+INSTALL_REQUIRES_PYPY = [
+    'lxml>=3.0,' + ','.join(['!=3.3.0beta%d' % i for i in xrange(5)])
+]
+
+if platform.python_implementation().lower() != 'pypy':
+    INSTALL_REQUIRES += INSTALL_REQUIRES_CPYTHON
+else:
+    INSTALL_REQUIRES += INSTALL_REQUIRES_PYPY
+
 
 setup(
     name='box.py',
