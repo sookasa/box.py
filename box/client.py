@@ -566,16 +566,25 @@ class BoxClient(object):
 
     def overwrite_file(self, file_id, fileobj, etag=None, content_modified_at=None):
         """
-        Uploads a file that will overwrite an existing one. The file_id must exist on the server.
+        Overwrites an existing file. The file_id must exist on the server.
+        Args:
+            - fileid: the id of an existing file.
+            - fileobj: a fileobj-like object that contains the data to upload
+            - etag: an etag the file has to match in order to be overwritten. If the etags mismatch, an PreconditionFailed is raised
+            - content_modified_at: (optional) a timestamp (datetime or a properly formatted string) of the time the
+              content was created
         """
         headers = dict(self.default_headers)
+        form = {}
+
         if etag:
             headers['If-Match'] = etag
 
         if content_modified_at:
-            headers['content_modified_at'] = content_modified_at.isoformat() if isinstance(content_modified_at, datetime) else content_modified_at
+            form['content_modified_at'] = content_modified_at.isoformat() if isinstance(content_modified_at, datetime) else content_modified_at
 
         response = requests.post('https://upload.box.com/api/2.0/files/{}/content'.format(file_id),
+                                 form,
                                  headers=headers,
                                  files={'file': fileobj})
 

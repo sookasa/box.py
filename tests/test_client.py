@@ -473,14 +473,14 @@ class TestClient(unittest.TestCase):
             .should_receive('_check_for_errors')
             .once())
 
-        expected_headers = {'content_modified_at': '2006-05-04T03:02:01+00:00',
-                            'If-Match': 'some_tag'}
+        expected_headers = { 'If-Match': 'some_tag' }
         expected_headers.update(client.default_headers)
 
         expected_response = mocked_response({'entries': [{'id': '1'}]})
         (flexmock(requests)
             .should_receive('post')
             .with_args('https://upload.box.com/api/2.0/files/666/content',
+                       {'content_modified_at': '2006-05-04T03:02:01+00:00'},
                        headers=expected_headers,
                        files={'file': FileObjMatcher('hello world')})
             .and_return(expected_response)
