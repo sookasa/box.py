@@ -105,34 +105,34 @@ class TestClient(unittest.TestCase):
 
     def test_post_dict(self):
         expected_data = {'arg': 'value'}
-        client = self.make_client("post", "foo", data=expected_data, crap=1)
+        client = self.make_client("post", "foo", result='result', data=expected_data, crap=1)
         actual_response = client._request('post', 'foo', data=expected_data, crap=1)
-        self.assertEqual(None, actual_response)
+        self.assertEqual('result', actual_response.text)
 
     def test_post_data(self):
         expected_data = "mooooo"
-        client = self.make_client("post", "foo", data=expected_data, crap=1)
+        client = self.make_client("post", "foo", result='result', data=expected_data, crap=1)
         actual_response = client._request('post', 'foo', data=expected_data, crap=1)
-        self.assertEqual(None, actual_response)
+        self.assertEqual('result', actual_response.text)
 
     def test_put_dict(self):
         expected_data = {'arg': 'value'}
-        client = self.make_client("put", "foo", data=expected_data, crap=1)
+        client = self.make_client("put", "foo", result='result', data=expected_data, crap=1)
         actual_response = client._request('put', 'foo', data=expected_data, crap=1)
-        self.assertEqual(None, actual_response)
+        self.assertEqual('result', actual_response.text)
 
     def test_put_data(self):
         expected_data = 'mooooo'
-        client = self.make_client("put", "foo", data=expected_data, crap=1)
+        client = self.make_client("put", "foo", result='response', data=expected_data, crap=1)
         actual_response = client._request('put', 'foo', data=expected_data, crap=1)
-        self.assertEqual(None, actual_response)
+        self.assertEqual(actual_response.text, 'response')
 
     def test_delete(self):
         custom_headers = {'hello': 'world'}
 
-        client = self.make_client("delete", "foo", headers=custom_headers, crap=1)
+        client = self.make_client("delete", "foo", result='response', headers=custom_headers, crap=1)
         actual_response = client._request('delete', 'foo', headers=custom_headers, crap=1)
-        self.assertEqual(None, actual_response)
+        self.assertEqual(actual_response.text, 'response')
 
         # verify headers were not modified
         self.assertDictEqual(custom_headers, {'hello': 'world'})
@@ -140,7 +140,7 @@ class TestClient(unittest.TestCase):
     def test_delete_no_headers(self):
         client = self.make_client("delete", "foo", crap=1)
         actual_response = client._request('delete', 'foo', crap=1)
-        self.assertEqual(None, actual_response)
+        self.assertEqual(None, actual_response.text)
 
     def test_automatic_refresh(self):
         credentials = CredentialsV2("access_token", "refresh_token", "client_id", "client_secret")
@@ -195,26 +195,33 @@ class TestClient(unittest.TestCase):
         result = client.get_user_info()
         self.assertDictEqual(result, {'name': 'bla'})
 
-        client = self.make_client("get", 'users/john')
-        client.get_user_info('john')
+        client = self.make_client("get", 'users/john', result={'a': 'b'})
+        result = client.get_user_info('john')
+        self.assertEqual({'a': 'b'}, result)
 
     def test_get_user_list(self):
-        client = self.make_client("get", "users/", params={'limit': 123, 'offset': 456})
-        client.get_user_list(limit=123, offset=456)
+        client = self.make_client("get", "users/", params={'limit': 123, 'offset': 456}, result={'a': 'b'})
+        result = client.get_user_list(limit=123, offset=456)
+        self.assertEqual({'a': 'b'}, result)
+
 
     def test_get_folder(self):
-        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456})
-        client.get_folder(folder_id=666, limit=123, offset=456)
+        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456}, result={'a': 'b'})
+        result = client.get_folder(folder_id=666, limit=123, offset=456)
+        self.assertEqual({'a': 'b'}, result)
 
-        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456, 'fields': ['hello']})
-        client.get_folder(folder_id=666, limit=123, offset=456, fields=['hello'])
+        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456, 'fields': ['hello']}, result={'a': 'b'})
+        result = client.get_folder(folder_id=666, limit=123, offset=456, fields=['hello'])
+        self.assertEqual({'a': 'b'}, result)
 
     def test_get_folder_content(self):
-        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456})
-        client.get_folder_content(folder_id=666, limit=123, offset=456)
+        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456}, result={'a': 'b'})
+        result = client.get_folder_content(folder_id=666, limit=123, offset=456)
+        self.assertEqual({'a': 'b'}, result)
 
-        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456, 'fields': ['hello']})
-        client.get_folder_content(folder_id=666, limit=123, offset=456, fields=['hello'])
+        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456, 'fields': ['hello']}, result={'a': 'b'})
+        result = client.get_folder_content(folder_id=666, limit=123, offset=456, fields=['hello'])
+        self.assertEqual({'a': 'b'}, result)
 
     def test_get_folder_iterator(self):
         # setup a regular client without expecting the usual calls
@@ -265,8 +272,8 @@ class TestClient(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_get_file_metadata(self):
-        client = self.make_client("get", 'files/123')
-        client.get_file_metadata(123)
+        client = self.make_client("get", 'files/123', result={'a': 'b'})
+        self.assertEqual({'a': 'b'}, client.get_file_metadata(123))
 
     def test_delete_file(self):
         client = self.make_client("delete", 'files/123')

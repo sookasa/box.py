@@ -271,7 +271,7 @@ class BoxClient(object):
     def default_headers(self):
         return self.credentials.headers
 
-    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", raw=False, try_refresh=True, **kwargs):
+    def _request(self, method, resource, params=None, data=None, headers=None, endpoint="api", try_refresh=True, **kwargs):
         """
         Performs a HTTP request to Box.
 
@@ -284,7 +284,6 @@ class BoxClient(object):
             - data: Any data to send. If data is a dict, it will be encoded as json.
             - headers: Any additional headers
             - endpoint: The endpoint to use, f.ex. api or upload, defaults to api
-            - raw: True if the full response should be returned, otherwise the parsed json body will be returned
             - try_refresh: True if a refresh of the credentials should be attempted, False otherwise
             - **kwargs: Any addiitonal arguments to pass to the request
         """
@@ -307,10 +306,7 @@ class BoxClient(object):
 
         self._check_for_errors(response)
 
-        if raw:
-            return response
-
-        return response.json()
+        return response
 
     @classmethod
     def _get_id(cls, identifier):
@@ -334,7 +330,7 @@ class BoxClient(object):
 
         """
         username = username or 'me'
-        return self._request("get", 'users/' + username)
+        return self._request("get", 'users/' + username).json()
 
     def get_user_list(self, limit=100, offset=0):
         """
@@ -350,7 +346,7 @@ class BoxClient(object):
             'offset': offset,
         }
 
-        return self._request("get", 'users/', params)
+        return self._request("get", 'users/', params).json()
 
     def get_folder(self, folder_id, limit=100, offset=0, fields=None):
         """
@@ -370,7 +366,7 @@ class BoxClient(object):
         if fields:
             params['fields'] = fields
 
-        return self._request("get", 'folders/{}'.format(folder_id), params=params)
+        return self._request("get", 'folders/{}'.format(folder_id), params=params).json()
 
     def get_folder_content(self, folder_id, limit=100, offset=0, fields=None):
         """
@@ -390,7 +386,7 @@ class BoxClient(object):
         if fields:
             params['fields'] = fields
 
-        return self._request("get", 'folders/{}/items'.format(folder_id), params=params)
+        return self._request("get", 'folders/{}/items'.format(folder_id), params=params).json()
 
     def get_folder_iterator(self, folder_id):
         """
@@ -418,7 +414,7 @@ class BoxClient(object):
         data = {"name": name,
                 'parent': {'id': self._get_id(parent)}}
 
-        return self._request("post", 'folders', data=data)
+        return self._request("post", 'folders', data=data).json()
 
     def get_file_metadata(self, file_id):
         """
@@ -429,7 +425,7 @@ class BoxClient(object):
 
         Returns a dictionary with all of the file metadata.
         """
-        return self._request("get", 'files/{}'.format(file_id))
+        return self._request("get", 'files/{}'.format(file_id)).json()
 
     def delete_file(self, file_id, etag=None):
         """
@@ -463,7 +459,7 @@ class BoxClient(object):
         if recursive:
             params['recursive'] = 'true'
 
-        self._request("delete", 'folders/{}'.format(folder_id), headers=headers, params=params, raw=True)
+        self._request("delete", 'folders/{}'.format(folder_id), headers=headers, params=params)
 
     def delete_trashed_file(self, file_id):
         """
@@ -487,7 +483,7 @@ class BoxClient(object):
         if version:
             params['version'] = version
 
-        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True, raw=True)
+        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True)
 
     def get_thumbnail(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None, max_wait=0):
         """
@@ -514,7 +510,7 @@ class BoxClient(object):
         if max_width is not None:
             params['max_width'] = max_width
 
-        response = self._request("get", 'files/{}/thumbnail.{}'.format(file_id, extension), params=params, raw=True)
+        response = self._request("get", 'files/{}/thumbnail.{}'.format(file_id, extension), params=params)
         if response.status_code == 202:
             # Thumbnail not ready yet
             ready_in_seconds = int(response.headers["Retry-After"])
@@ -591,7 +587,7 @@ class BoxClient(object):
         if new_filename:
             data['name'] = new_filename
 
-        return self._request("post", 'files/{}/copy'.format(file_id), data=data)
+        return self._request("post", 'files/{}/copy'.format(file_id), data=data).json()
 
     def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=None, can_preview=None):
         """
@@ -635,7 +631,7 @@ class BoxClient(object):
         if expire_at:
             data['unshared_at'] = expire_at.isoformat()
 
-        result = self._request("put", 'files/{}'.format(file_id), data={'shared_link': data})
+        result = self._request("put", 'files/{}'.format(file_id), data={'shared_link': data}).json()
         return result['shared_link']
 
     def get_events(self, stream_position='0', stream_type=EventFilter.ALL, limit=1000):
@@ -695,7 +691,7 @@ class BoxClient(object):
         See http://developers.box.com/using-long-polling-to-monitor-events/ for details.
         """
 
-        result = self._request('options', "events")
+        result = self._request('options', "events").json()
         return result['entries'][0]
 
     @staticmethod
@@ -732,7 +728,7 @@ class BoxClient(object):
             'offset': offset,
         }
 
-        return self._request("get", 'search', params)
+        return self._request("get", 'search', params).json()
 
 
 class BoxClientException(Exception):

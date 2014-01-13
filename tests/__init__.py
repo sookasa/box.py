@@ -1,8 +1,10 @@
 from StringIO import StringIO
-from datetime import tzinfo, timedelta, datetime
-
+from datetime import tzinfo, timedelta
 from flexmock import flexmock
-
+try:
+    import json as json
+except:
+    import simplejson as json
 
 class FileObjMatcher(object):
     """
@@ -45,4 +47,7 @@ utc = UTC()
 
 
 def mocked_response(content=None, status_code=200, headers=None):
-    return flexmock(ok=status_code < 400, status_code=status_code, json=lambda: content, raw=content, text=content, headers=headers)
+    if isinstance(content, dict):
+        content = json.dumps(content)
+
+    return flexmock(ok=status_code < 400, status_code=status_code, json=lambda: json.loads(content), raw=content, text=content, headers=headers)
