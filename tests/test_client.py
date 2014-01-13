@@ -8,8 +8,8 @@ import unittest
 from flexmock import flexmock
 import requests
 
-from box import BoxClient, ShareAccess, EventFilter, BoxClientException, \
-    ItemAlreadyExists, ItemDoesNotExist, PreconditionFailed, BoxAccountUnauthorized, \
+from box import BoxClient, ShareAccess, EventFilter, BoxClientException,\
+    ItemAlreadyExists, ItemDoesNotExist, PreconditionFailed, BoxAccountUnauthorized,\
     CredentialsV2
 
 
@@ -19,9 +19,9 @@ class TestClient(unittest.TestCase):
         Makes a new test client
         """
         client = BoxClient('my_token')
-        flexmock(client) \
-            .should_receive('_check_for_errors') \
-            .once()
+        (flexmock(client)
+            .should_receive('_check_for_errors')
+            .once())
 
         if headers:
             headers = dict(headers)
@@ -32,28 +32,28 @@ class TestClient(unittest.TestCase):
         if isinstance(data, dict):
             data = json.dumps(data)
 
-        flexmock(requests) \
-            .should_receive('request') \
+        (flexmock(requests)
+            .should_receive('request')
             .with_args(method,
                        'https://%s.box.com/2.0/%s' % (endpoint, path),
                        params=params,
                        data=data,
                        headers=headers,
-                       **kwargs) \
-            .and_return(mocked_response(result)) \
-            .once()
+                       **kwargs)
+            .and_return(mocked_response(result))
+            .once())
 
         return client
 
     def test_init_with_string(self):
-        flexmock(CredentialsV2)\
-            .should_receive('__init__')\
-            .with_args('my_token')\
-            .once()
+        (flexmock(CredentialsV2)
+            .should_receive('__init__')
+            .with_args('my_token')
+            .once())
 
-        flexmock(CredentialsV2)\
-            .should_receive('headers')\
-            .and_return({'Authorization': 'peanuts'})\
+        (flexmock(CredentialsV2)
+            .should_receive('headers')
+            .and_return({'Authorization': 'peanuts'}))
 
         client = BoxClient('my_token')
         self.assertDictEqual(client.default_headers, {'Authorization': 'peanuts'})
@@ -149,39 +149,39 @@ class TestClient(unittest.TestCase):
         requests_mock = flexmock(requests)
 
         # The first attempt, which is denied
-        requests_mock \
-            .should_receive('request') \
+        (requests_mock
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/users/me',
                        params=None,
                        data=None,
-                       headers=client.default_headers) \
-            .and_return(mocked_response(status_code=401)) \
-            .once()
+                       headers=client.default_headers)
+            .and_return(mocked_response(status_code=401))
+            .once())
 
         # The call to refresh the token
-        requests_mock \
-            .should_receive('post')\
+        (requests_mock
+            .should_receive('post')
             .with_args('https://www.box.com/api/oauth2/token', {
                 'client_id': 'client_id',
                 'client_secret': 'client_secret',
                 'refresh_token': 'refresh_token',
                 'grant_type': 'refresh_token',
-            })\
+            })
             .and_return(mocked_response({"access_token": "new_access_token",
                                          "refresh_token": "new_refresh_token"}))\
-            .once()
+            .once())
 
         # The second attempt with the new access token
-        requests_mock \
-            .should_receive('request') \
+        (requests_mock
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/users/me',
                        params=None,
                        data=None,
-                       headers={"Authorization": "Bearer new_access_token"}) \
-            .and_return(mocked_response({'name': 'bla'})) \
-            .once()
+                       headers={"Authorization": "Bearer new_access_token"})
+            .and_return(mocked_response({'name': 'bla'}))
+            .once())
 
         result = client.get_user_info()
         self.assertDictEqual(result, {'name': 'bla'})
@@ -226,28 +226,28 @@ class TestClient(unittest.TestCase):
     def test_get_folder_iterator(self):
         # setup a regular client without expecting the usual calls
         client = BoxClient('my_token')
-        flexmock(client) \
-            .should_receive('get_folder_content') \
-            .with_args(666, limit=1000) \
-            .and_return({'entries': range(10)}) \
-            .once()
+        (flexmock(client)
+            .should_receive('get_folder_content')
+            .with_args(666, limit=1000)
+            .and_return({'entries': range(10)})
+            .once())
 
-        flexmock(client) \
-            .should_receive('get_folder_content') \
-            .with_args(666, limit=1000, offset=1000) \
-            .and_return({'entries': None}) \
-            .once()
+        (flexmock(client)
+            .should_receive('get_folder_content')
+            .with_args(666, limit=1000, offset=1000)
+            .and_return({'entries': None})
+            .once())
 
         self.assertListEqual(list(client.get_folder_iterator(666)), list(range(10)))
 
     def test_get_folder_iterator_zero_content(self):
         # setup a regular client without expecting the usual calls
         client = BoxClient('my_token')
-        flexmock(client) \
-            .should_receive('get_folder_content') \
-            .with_args(666, limit=1000) \
-            .and_return({'entries': None}) \
-            .once()
+        (flexmock(client)
+            .should_receive('get_folder_content')
+            .with_args(666, limit=1000)
+            .and_return({'entries': None})
+            .once())
 
         self.assertListEqual(list(client.get_folder_iterator(666)), [])
 
@@ -325,70 +325,70 @@ class TestClient(unittest.TestCase):
         client = BoxClient("my_token")
 
         # Delayed without wait allowed
-        flexmock(requests) \
-            .should_receive('request') \
+        (flexmock(requests)
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers) \
-            .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com", "Retry-After": "5"})) \
-            .once()
+                       headers=client.default_headers)
+            .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com", "Retry-After": "5"}))
+            .once())
 
         thumbnail = client.get_thumbnail(123)
         self.assertIsNone(thumbnail)
 
         # Delayed within allowed wait time
-        flexmock(requests) \
-            .should_receive('request') \
+        (flexmock(requests)
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers) \
-            .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com/url_to_thumbnail", "Retry-After": "1"})) \
-            .once()
+                       headers=client.default_headers)
+            .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com/url_to_thumbnail", "Retry-After": "1"}))
+            .once())
 
-        flexmock(requests) \
-            .should_receive('get') \
-            .with_args('http://box.com/url_to_thumbnail', headers=client.default_headers) \
-            .and_return(mocked_response(StringIO("Thumbnail contents"))) \
-            .once()
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('http://box.com/url_to_thumbnail', headers=client.default_headers)
+            .and_return(mocked_response(StringIO("Thumbnail contents")))
+            .once())
 
         thumbnail = client.get_thumbnail(123, max_wait=1)
         self.assertEqual('Thumbnail contents', thumbnail.read())
 
         # Not available
-        flexmock(requests) \
-            .should_receive('request') \
+        (flexmock(requests)
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers) \
-            .and_return(mocked_response(status_code=302)) \
-            .once()
+                       headers=client.default_headers)
+            .and_return(mocked_response(status_code=302))
+            .once())
 
         thumbnail = client.get_thumbnail(123)
         self.assertIsNone(thumbnail)
 
         # Already available
-        flexmock(requests) \
-            .should_receive('request') \
+        (flexmock(requests)
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers) \
-            .and_return(mocked_response(StringIO("Thumbnail contents"))) \
-            .once()
+                       headers=client.default_headers)
+            .and_return(mocked_response(StringIO("Thumbnail contents")))
+            .once())
 
         thumbnail = client.get_thumbnail(123)
         self.assertEqual('Thumbnail contents', thumbnail.read())
 
         # With size requirements
-        flexmock(requests) \
-            .should_receive('request') \
+        (flexmock(requests)
+            .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={"min_height": 1,
@@ -396,28 +396,28 @@ class TestClient(unittest.TestCase):
                                "min_width": 3,
                                "max_width": 4},
                        data=None,
-                       headers=client.default_headers) \
-            .and_return(mocked_response(StringIO("Thumbnail contents"))) \
-            .once()
+                       headers=client.default_headers)
+            .and_return(mocked_response(StringIO("Thumbnail contents")))
+            .once())
 
         thumbnail = client.get_thumbnail(123, min_height=1, max_height=2, min_width=3, max_width=4)
         self.assertEqual('Thumbnail contents', thumbnail.read())
 
     def test_upload_file(self):
         client = BoxClient('my_token')
-        flexmock(client) \
-            .should_receive('_check_for_errors') \
-            .once()
+        (flexmock(client)
+            .should_receive('_check_for_errors')
+            .once())
 
         response = mocked_response({'entries': [{'id': '1'}]})
-        flexmock(requests) \
-            .should_receive('post') \
+        (flexmock(requests)
+            .should_receive('post')
             .with_args('https://upload.box.com/api/2.0/files/content',
                        {'parent_id': '666'},
                        headers=client.default_headers,
-                       files={'hello.jpg': FileObjMatcher('hello world')}) \
-            .and_return(response) \
-            .once()
+                       files={'hello.jpg': FileObjMatcher('hello world')})
+            .and_return(response)
+            .once())
 
         result = client.upload_file('hello.jpg', StringIO('hello world'), parent=666)
         self.assertEqual({'id': '1'}, result)
@@ -478,13 +478,13 @@ class TestClient(unittest.TestCase):
         expected_headers.update(client.default_headers)
 
         expected_response = mocked_response({'entries': [{'id': '1'}]})
-        flexmock(requests) \
-            .should_receive('post') \
+        (flexmock(requests)
+            .should_receive('post')
             .with_args('https://upload.box.com/api/2.0/files/666/content',
                        headers=expected_headers,
-                       files={'file': FileObjMatcher('hello world')}) \
-            .and_return(expected_response) \
-            .once()
+                       files={'file': FileObjMatcher('hello world')})
+            .and_return(expected_response)
+            .once())
 
         result = client.overwrite_file(666, StringIO('hello world'), etag='some_tag',
                                        content_modified_at=datetime(2006, 5, 4, 3, 2, 1, 0, tzinfo=UTC()),)
@@ -629,22 +629,22 @@ class TestClient(unittest.TestCase):
                 'stream_position': 'some_stream_position',
             }
 
-            flexmock(client) \
-                .should_receive('_get_long_poll_data') \
-                .and_return(longpoll_response) \
-                .once()
+            (flexmock(client)
+                .should_receive('_get_long_poll_data')
+                .and_return(longpoll_response)
+                .once())
 
-            flexmock(client) \
-                .should_receive('get_events') \
-                .with_args(stream_position='now', stream_type=EventFilter.CHANGES) \
-                .and_return({'next_stream_position': 'some_stream_position'}) \
-                .once()
+            (flexmock(client)
+                .should_receive('get_events')
+                .with_args(stream_position='now', stream_type=EventFilter.CHANGES)
+                .and_return({'next_stream_position': 'some_stream_position'})
+                .once())
 
-            flexmock(requests) \
-                .should_receive('get') \
-                .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params) \
-                .and_return(mocked_response({'message': 'new_message'})) \
-                .once()
+            (flexmock(requests)
+                .should_receive('get')
+                .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params)
+                .and_return(mocked_response({'message': 'new_message'}))
+                .once())
 
             position = client.long_poll_for_events(stream_position, stream_type=EventFilter.CHANGES)
             self.assertEqual('some_stream_position', position)
@@ -660,10 +660,10 @@ class TestClient(unittest.TestCase):
             'retry_timeout': 610
         }
 
-        flexmock(client) \
-            .should_receive('_get_long_poll_data') \
-            .and_return(longpoll_response) \
-            .once()
+        (flexmock(client)
+            .should_receive('_get_long_poll_data')
+            .and_return(longpoll_response)
+            .once())
 
         expected_get_params = {
             'channel': ['12345678'],
@@ -671,11 +671,11 @@ class TestClient(unittest.TestCase):
             'stream_position': 'some_stream_position',
         }
 
-        flexmock(requests) \
-            .should_receive('get') \
-            .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params) \
-            .and_return(mocked_response({'message': 'new_message'})) \
-            .once()
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params)
+            .and_return(mocked_response({'message': 'new_message'}))
+            .once())
 
         position = client.long_poll_for_events('some_stream_position', stream_type=EventFilter.CHANGES)
         self.assertEqual('some_stream_position', position)
@@ -691,14 +691,14 @@ class TestClient(unittest.TestCase):
             'retry_timeout': 610
         }
 
-        flexmock(client) \
-            .should_receive('_get_long_poll_data') \
-            .and_return(longpoll_response) \
-            .times(5)
+        (flexmock(client)
+            .should_receive('_get_long_poll_data')
+            .and_return(longpoll_response)
+            .times(5))
 
-        flexmock(client) \
-            .should_receive('get_events') \
-            .times(0)
+        (flexmock(client)
+            .should_receive('get_events')
+            .times(0))
 
         expected_get_params = {
             'channel': ['12345678'],
@@ -706,15 +706,15 @@ class TestClient(unittest.TestCase):
             'stream_position': 'some_stream_position',
         }
 
-        flexmock(requests) \
-            .should_receive('get') \
-            .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params) \
-            .and_return(mocked_response({'message': 'foo'})) \
-            .and_return(mocked_response({'message': 'foo'})) \
-            .and_return(mocked_response({'message': 'foo'})) \
-            .and_return(mocked_response({'message': 'foo'})) \
-            .and_return(mocked_response({'message': 'new_message'})) \
-            .times(5)
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params)
+            .and_return(mocked_response({'message': 'foo'}))
+            .and_return(mocked_response({'message': 'foo'}))
+            .and_return(mocked_response({'message': 'foo'}))
+            .and_return(mocked_response({'message': 'foo'}))
+            .and_return(mocked_response({'message': 'new_message'}))
+            .times(5))
 
         position = client.long_poll_for_events('some_stream_position', stream_type=EventFilter.CHANGES)
         self.assertEqual('some_stream_position', position)
@@ -730,10 +730,10 @@ class TestClient(unittest.TestCase):
             'retry_timeout': 610
         }
 
-        flexmock(client) \
-            .should_receive('_get_long_poll_data') \
-            .and_return(longpoll_response) \
-            .times(2)
+        (flexmock(client)
+            .should_receive('_get_long_poll_data')
+            .and_return(longpoll_response)
+            .times(2))
 
         expected_get_params = {
             'channel': ['12345678'],
@@ -741,12 +741,12 @@ class TestClient(unittest.TestCase):
             'stream_position': 'some_stream_position',
         }
 
-        flexmock(requests) \
-            .should_receive('get') \
-            .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params) \
-            .and_return(mocked_response({'message': 'foo'})) \
-            .and_return(mocked_response('some error', status_code=400)) \
-            .times(2)
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('http://2.realtime.services.box.net/subscribe', params=expected_get_params)
+            .and_return(mocked_response({'message': 'foo'}))
+            .and_return(mocked_response('some error', status_code=400))
+            .times(2))
 
         with self.assertRaises(BoxClientException) as expect_exception:
             client.long_poll_for_events('some_stream_position', stream_type=EventFilter.CHANGES)

@@ -18,19 +18,19 @@ class TestAuthenticationV1(unittest.TestCase):
 
     def test_start_authenticate_v1(self):
         response = mocked_response('<response><status>get_ticket_ok</status><ticket>golden_ticket</ticket></response>')
-        flexmock(requests)\
-            .should_receive('get')\
-            .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')\
-            .and_return(response)
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')
+            .and_return(response))
 
         self.assertEqual(start_authenticate_v1('my_api_key'), 'https://www.box.com/api/1.0/auth/golden_ticket')
 
     def test_start_authenticate_v1_fail(self):
         response = mocked_response('something_terrible', status_code=400)
-        flexmock(requests)\
-            .should_receive('get')\
-            .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')\
-            .and_return(response)
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')
+            .and_return(response))
 
         with self.assertRaises(BoxAuthenticationException) as expected_exception:
             self.assertEqual(start_authenticate_v1('my_api_key'), 'https://www.box.com/api/1.0/auth/golden_ticket')
@@ -38,10 +38,10 @@ class TestAuthenticationV1(unittest.TestCase):
         self.assertEqual('something_terrible', expected_exception.exception.message)
 
         response = mocked_response('<response><status>something_terrible</status></response>')
-        flexmock(requests)\
-            .should_receive('get')\
-            .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')\
-            .and_return(response)
+        (flexmock(requests)
+            .should_receive('get')
+            .with_args('https://www.box.com/api/1.0/rest?action=get_ticket&api_key=my_api_key')
+            .and_return(response))
 
         with self.assertRaises(BoxAuthenticationException) as expected_exception:
             self.assertEqual(start_authenticate_v1('my_api_key'), 'https://www.box.com/api/1.0/auth/golden_ticket')
@@ -55,14 +55,14 @@ class TestAuthenticationV1(unittest.TestCase):
             <name>test_name</name>
         </user>
         </response>""")
-        flexmock(requests)\
-            .should_receive('get')\
+        (flexmock(requests)
+            .should_receive('get')
             .with_args('https://www.box.com/api/1.0/rest', params={
                 'action': 'get_auth_token',
                 'api_key': 'my_api_key',
                 'ticket': 'golden_ticket'
-            })\
-            .and_return(response)
+            })
+            .and_return(response))
 
         self.assertDictEqual(finish_authenticate_v1('my_api_key', 'golden_ticket'), {
             'token': '123456',
@@ -73,14 +73,14 @@ class TestAuthenticationV1(unittest.TestCase):
 
     def test_finish_authenticate_error(self):
         response = mocked_response('something_terrible', status_code=400)
-        flexmock(requests)\
-            .should_receive('get')\
+        (flexmock(requests)
+            .should_receive('get')
             .with_args('https://www.box.com/api/1.0/rest', params={
                 'action': 'get_auth_token',
                 'api_key': 'my_api_key',
                 'ticket': 'golden_ticket'
-            })\
-            .and_return(response)
+            })
+            .and_return(response))
 
         with self.assertRaises(BoxAuthenticationException) as expected_exception:
             finish_authenticate_v1('my_api_key', 'golden_ticket')
@@ -88,14 +88,14 @@ class TestAuthenticationV1(unittest.TestCase):
         self.assertEqual('something_terrible', expected_exception.exception.message)
 
         response = mocked_response('<response><status>something_terrible</status></response>')
-        flexmock(requests)\
-            .should_receive('get')\
+        (flexmock(requests)
+            .should_receive('get')
             .with_args('https://www.box.com/api/1.0/rest', params={
                 'action': 'get_auth_token',
                 'api_key': 'my_api_key',
                 'ticket': 'golden_ticket'
-            })\
-            .and_return(response)
+            })
+            .and_return(response))
 
         with self.assertRaises(BoxAuthenticationException) as expected_exception:
             finish_authenticate_v1('my_api_key', 'golden_ticket')
@@ -127,12 +127,12 @@ class TestAuthenticationV2(unittest.TestCase):
             'refresh_token': 'refresh_token',
             'grant_type': 'refresh_token',
         }
-        flexmock(requests)\
-            .should_receive('post')\
-            .with_args('https://www.box.com/api/oauth2/token', args)\
+        (flexmock(requests)
+            .should_receive('post')
+            .with_args('https://www.box.com/api/oauth2/token', args)
             .and_return(mocked_response({'access_token': 'new_access_token',
-                                         'refresh_token': 'new_refresh_token'}))\
-            .once()
+                                         'refresh_token': 'new_refresh_token'}))
+            .once())
 
         self.assertEqual(credentials.refresh(), True)
         self.assertEqual(credentials._access_token, 'new_access_token')
@@ -146,12 +146,12 @@ class TestAuthenticationV2(unittest.TestCase):
             'refresh_token': 'refresh_token',
             'grant_type': 'refresh_token',
         }
-        flexmock(requests)\
-            .should_receive('post')\
-            .with_args('https://www.box.com/api/oauth2/token', args)\
+        (flexmock(requests)
+            .should_receive('post')
+            .with_args('https://www.box.com/api/oauth2/token', args)
             .and_return(mocked_response({'access_token': 'new_access_token',
-                                         'refresh_token': 'new_refresh_token'}))\
-            .once()
+                                         'refresh_token': 'new_refresh_token'}))
+            .once())
 
         self.assertEqual(credentials.refresh(), True)
         self.assertEqual(credentials._access_token, 'new_access_token')
@@ -196,11 +196,11 @@ class TestAuthenticationV2(unittest.TestCase):
             'hello': 'world'
         }
 
-        flexmock(requests)\
-            .should_receive('post')\
-            .with_args('https://www.box.com/api/oauth2/token', expected_args)\
-            .and_return(flexmock(json=lambda: fake_response))\
-            .once()
+        (flexmock(requests)
+            .should_receive('post')
+            .with_args('https://www.box.com/api/oauth2/token', expected_args)
+            .and_return(flexmock(json=lambda: fake_response))
+            .once())
 
         response = _oauth2_token_request('111111', '22222', 'wish', some_key='some_value')
         self.assertDictEqual(fake_response, response)
@@ -218,11 +218,11 @@ class TestAuthenticationV2(unittest.TestCase):
             'error_description': 'jim'
         }
 
-        flexmock(requests)\
-            .should_receive('post')\
-            .with_args('https://www.box.com/api/oauth2/token', expected_args)\
-            .and_return(mocked_response(fake_response))\
-            .once()
+        (flexmock(requests)
+            .should_receive('post')
+            .with_args('https://www.box.com/api/oauth2/token', expected_args)
+            .and_return(mocked_response(fake_response))
+            .once())
 
         with self.assertRaises(BoxAuthenticationException) as expected_exception:
             _oauth2_token_request('111111', '22222', 'wish', some_key='some_value')
@@ -255,11 +255,11 @@ class TestAuthenticationV2(unittest.TestCase):
             'grant_type': 'refresh_token',
         }
 
-        flexmock(requests)\
-            .should_receive('post')\
-            .with_args('https://www.box.com/api/oauth2/token', args)\
-            .and_return(flexmock(json=lambda: {'aaa': 'bbb'}))\
-            .once()
+        (flexmock(requests)
+            .should_receive('post')
+            .with_args('https://www.box.com/api/oauth2/token', args)
+            .and_return(flexmock(json=lambda: {'aaa': 'bbb'}))
+            .once())
 
         result = refresh_v2_token('111', '222', '333')
         self.assertDictEqual({'aaa': 'bbb'}, result)
