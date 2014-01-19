@@ -15,9 +15,9 @@ INSTALL_REQUIRES_CPYTHON = [
     'lxml>=3.0',
 ]
 
-# lxml betas (and possibly future releases?) are broken with pypy. lets see how this plays out...
+# lxml 3.3.x is broken with pypy. lets see how this plays out...
 INSTALL_REQUIRES_PYPY = [
-    'lxml>=3.0,' + ','.join(['!=3.3.0beta%d' % i for i in xrange(5)])
+    'lxml>=3.0,<3.3.0'
 ]
 
 if platform.python_implementation().lower() != 'pypy':
