@@ -17,7 +17,7 @@ INSTALL_REQUIRES_CPYTHON = [
 
 # lxml 3.3.x is broken with pypy. lets see how this plays out...
 INSTALL_REQUIRES_PYPY = [
-    'lxml>=3.0,<3.3.0'
+    'lxml>3.0,<3.3.beta'
 ]
 
 if platform.python_implementation().lower() != 'pypy':
