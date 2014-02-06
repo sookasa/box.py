@@ -415,7 +415,7 @@ class TestClient(unittest.TestCase):
             .with_args('https://upload.box.com/api/2.0/files/content',
                        {'parent_id': '666'},
                        headers=client.default_headers,
-                       files={'hello.jpg': FileObjMatcher('hello world')})
+                       files={'hello.jpg': ('hello.jpg', FileObjMatcher('hello world'))})
             .and_return(response)
             .once())
 
@@ -438,7 +438,7 @@ class TestClient(unittest.TestCase):
                            'content_created_at': '2006-05-04T03:02:01+00:00'
                        },
                        headers=client.default_headers,
-                       files={'hello.jpg': FileObjMatcher('hello world')})
+                       files={'hello.jpg': ('hello.jpg', FileObjMatcher('hello world'))})
             .and_return(response)
             .once())
 
@@ -459,7 +459,7 @@ class TestClient(unittest.TestCase):
             .with_args('https://upload.box.com/api/2.0/files/content',
                        {'parent_id': '666'},
                        headers=client.default_headers,
-                       files={'hello.jpg': FileObjMatcher('hello world')})
+                       files={'hello.jpg': ('hello.jpg', FileObjMatcher('hello world'))})
             .and_return(response)
             .once())
 

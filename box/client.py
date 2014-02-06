@@ -559,7 +559,7 @@ class BoxClient(object):
         response = requests.post('https://upload.box.com/api/2.0/files/content',
                                  form,
                                  headers=self.default_headers,
-                                 files={filename: fileobj})
+                                 files={filename: (filename, fileobj)})
 
         self._check_for_errors(response)
         return response.json()['entries'][0]
