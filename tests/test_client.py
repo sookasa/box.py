@@ -533,8 +533,13 @@ class TestClient(unittest.TestCase):
             'limit': 1000
         }
 
-        client = self.make_client("get", "events", params=args)
-        client.get_events()
+        cursor = {
+            'next_stream_position': 12345
+        }
+
+        client = self.make_client("get", "events", params=args, result=cursor)
+        result = client.get_events()
+        self.assertEqual(result, cursor)
 
         # custom arguments
         args = {
@@ -542,7 +547,7 @@ class TestClient(unittest.TestCase):
             'stream_type': 'changes',
             'limit': 9
         }
-        client = self.make_client("get", "events", params=args)
+        client = self.make_client("get", "events", params=args, result=cursor)
         client.get_events(stream_position=123, stream_type=EventFilter.CHANGES, limit=9)
 
     def test_get_path_of_file(self):

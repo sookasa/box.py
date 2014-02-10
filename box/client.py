@@ -677,7 +677,7 @@ class BoxClient(object):
             'limit': limit
         }
 
-        return self._request("get", 'events', params)
+        return self._request("get", 'events', params).json()
 
     def long_poll_for_events(self, stream_position=None, stream_type=EventFilter.ALL):
         """
