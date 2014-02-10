@@ -3,6 +3,11 @@
 Release History
 ---------------
 
+1.2.6
++++++
+- Fixed: upload_file did not respect filename if the fileobj had a name attribute
+- Fixed: long_poll_for_events() crashed (first appeared at 1.2.5)
+
 1.2.5
 +++++
 - Fixed issue with delete_file raising an exception after deletion.
