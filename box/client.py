@@ -85,9 +85,14 @@ def finish_authenticate_v1(api_key, ticket):
     if content.status != 'get_auth_token_ok':
         raise BoxAuthenticationException(r.status_code, content.status.text)
 
+    user_dict = {}
+
+    for x in content.user.iterchildren():
+        user_dict[x.tag] = x.pyval
+
     return {
         'token': content.auth_token.text,
-        'user': {x.tag: x.pyval for x in content.user.iterchildren()}
+        'user': user_dict
     }
 
 
