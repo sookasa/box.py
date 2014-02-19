@@ -28,7 +28,7 @@ Supported features
 
 Support
 -------
-- Python 2.7
+- Python 2.6+
 - PyPy (dependent on lxml at this point for the v1 authentication flow; see https://bitbucket.org/pypy/compatibility/wiki/lxml)
 
 Installation
