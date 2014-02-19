@@ -1,6 +1,6 @@
 from StringIO import StringIO
 from tests import FileObjMatcher
-import unittest
+import unittest2 as unittest
 
 
 class TestFileObjMatcher(unittest.TestCase):
