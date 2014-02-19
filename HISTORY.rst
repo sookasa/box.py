@@ -3,6 +3,10 @@
 Release History
 ---------------
 
+1.2.7
++++++
+- Python 2.6 support (thanks @aaylward)
+
 1.2.6
 +++++
 - Fixed: upload_file did not respect filename if the fileobj had a name attribute
