@@ -3,7 +3,7 @@ from datetime import datetime
 from httplib import CONFLICT, NOT_FOUND, PRECONDITION_FAILED, UNAUTHORIZED
 import json
 from tests import FileObjMatcher, UTC, mocked_response
-import unittest
+import unittest2 as unittest
 
 from flexmock import flexmock
 import requests

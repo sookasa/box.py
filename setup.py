@@ -5,7 +5,8 @@ import platform
 TEST_REQUIRES = [
     'flexmock>=0.9.7',
     'nose',
-    'coverage'
+    'coverage',
+    'unittest2'
 ]
 
 INSTALL_REQUIRES = [

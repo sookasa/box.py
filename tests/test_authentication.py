@@ -1,5 +1,5 @@
 from tests import mocked_response
-import unittest
+import unittest2 as unittest
 from urlparse import urlsplit, parse_qs
 
 from flexmock import flexmock
