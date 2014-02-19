@@ -203,7 +203,7 @@ class CredentialsV1(object):
 
     @property
     def headers(self):
-        return {'Authorization': 'BoxAuth api_key={}&auth_token={}'.format(self._api_key, self._access_token)}
+        return {'Authorization': 'BoxAuth api_key={0}&auth_token={1}'.format(self._api_key, self._access_token)}
 
     def refresh(self):
         """
@@ -233,7 +233,7 @@ class CredentialsV2(object):
 
     @property
     def headers(self):
-        return {'Authorization': 'Bearer {}'.format(self._access_token)}
+        return {'Authorization': 'Bearer {0}'.format(self._access_token)}
 
     def refresh(self):
         """
@@ -373,7 +373,7 @@ class BoxClient(object):
         if fields:
             params['fields'] = fields
 
-        return self._request("get", 'folders/{}'.format(folder_id), params=params).json()
+        return self._request("get", 'folders/{0}'.format(folder_id), params=params).json()
 
     def get_folder_content(self, folder_id=0, limit=100, offset=0, fields=None):
         """
@@ -394,7 +394,7 @@ class BoxClient(object):
         if fields:
             params['fields'] = fields
 
-        return self._request("get", 'folders/{}/items'.format(folder_id), params=params).json()
+        return self._request("get", 'folders/{0}/items'.format(folder_id), params=params).json()
 
     def get_folder_iterator(self, folder_id):
         """
@@ -433,7 +433,7 @@ class BoxClient(object):
 
         Returns a dictionary with all of the file metadata.
         """
-        return self._request("get", 'files/{}'.format(file_id)).json()
+        return self._request("get", 'files/{0}'.format(file_id)).json()
 
     def delete_file(self, file_id, etag=None):
         """
@@ -448,7 +448,7 @@ class BoxClient(object):
         if etag:
             headers['If-Match'] = etag
 
-        self._request("delete", 'files/{}'.format(file_id), headers=headers)
+        self._request("delete", 'files/{0}'.format(file_id), headers=headers)
 
     def delete_folder(self, folder_id, etag=None, recursive=False):
         """
@@ -467,13 +467,13 @@ class BoxClient(object):
         if recursive:
             params['recursive'] = 'true'
 
-        self._request("delete", 'folders/{}'.format(folder_id), headers=headers, params=params)
+        self._request("delete", 'folders/{0}'.format(folder_id), headers=headers, params=params)
 
     def delete_trashed_file(self, file_id):
         """
         Permanently deletes an item that is in the trash.
         """
-        self._request("delete", 'files/{}/trash'.format(file_id))
+        self._request("delete", 'files/{0}/trash'.format(file_id))
 
     def download_file(self, file_id, version=None):
         """
@@ -491,7 +491,7 @@ class BoxClient(object):
         if version:
             params['version'] = version
 
-        return self._request("get", 'files/{}/content'.format(file_id), params=params, stream=True)
+        return self._request("get", 'files/{0}/content'.format(file_id), params=params, stream=True)
 
     def get_thumbnail(self, file_id, extension="png", min_height=None, max_height=None, min_width=None, max_width=None, max_wait=0):
         """
@@ -518,7 +518,7 @@ class BoxClient(object):
         if max_width is not None:
             params['max_width'] = max_width
 
-        response = self._request("get", 'files/{}/thumbnail.{}'.format(file_id, extension), params=params)
+        response = self._request("get", 'files/{0}/thumbnail.{1}'.format(file_id, extension), params=params)
         if response.status_code == 202:
             # Thumbnail not ready yet
             ready_in_seconds = int(response.headers["Retry-After"])
@@ -588,7 +588,7 @@ class BoxClient(object):
         if content_modified_at:
             form['content_modified_at'] = content_modified_at.isoformat() if isinstance(content_modified_at, datetime) else content_modified_at
 
-        response = requests.post('https://upload.box.com/api/2.0/files/{}/content'.format(file_id),
+        response = requests.post('https://upload.box.com/api/2.0/files/{0}/content'.format(file_id),
                                  form,
                                  headers=headers,
                                  files={'file': fileobj})
@@ -614,7 +614,7 @@ class BoxClient(object):
         if new_filename:
             data['name'] = new_filename
 
-        return self._request("post", 'files/{}/copy'.format(file_id), data=data).json()
+        return self._request("post", 'files/{0}/copy'.format(file_id), data=data).json()
 
     def share_link(self, file_id, access=ShareAccess.OPEN, expire_at=None, can_download=None, can_preview=None):
         """
@@ -658,7 +658,7 @@ class BoxClient(object):
         if expire_at:
             data['unshared_at'] = expire_at.isoformat()
 
-        result = self._request("put", 'files/{}'.format(file_id), data={'shared_link': data}).json()
+        result = self._request("put", 'files/{0}'.format(file_id), data={'shared_link': data}).json()
         return result['shared_link']
 
     def get_events(self, stream_position='0', stream_type=EventFilter.ALL, limit=1000):
