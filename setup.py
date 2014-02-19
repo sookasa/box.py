@@ -29,7 +29,7 @@ else:
 
 setup(
     name='box.py',
-    version='1.2.6',
+    version='1.2.7',
     author='Sookasa',
     author_email='dev@sookasa.com',
     url='http://github.com/sookasa/box.py',
@@ -50,6 +50,7 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Software Development',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
 )
