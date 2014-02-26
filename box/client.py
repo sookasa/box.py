@@ -518,7 +518,7 @@ class BoxClient(object):
         if max_width is not None:
             params['max_width'] = max_width
 
-        response = self._request("get", 'files/{0}/thumbnail.{1}'.format(file_id, extension), params=params)
+        response = self._request("get", 'files/{0}/thumbnail.{1}'.format(file_id, extension), params=params, stream=True)
         if response.status_code == 202:
             # Thumbnail not ready yet
             ready_in_seconds = int(response.headers["Retry-After"])
@@ -528,7 +528,7 @@ class BoxClient(object):
             # Wait for the thumbnail to get ready
             time.sleep(ready_in_seconds)
 
-            response = requests.get(response.headers["Location"], headers=self.default_headers)
+            response = self._request("get", 'files/{0}/thumbnail.{1}'.format(file_id, extension), params=params, stream=True)
             self._check_for_errors(response)
             return response.raw
         elif response.status_code == 302:

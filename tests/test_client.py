@@ -331,32 +331,36 @@ class TestClient(unittest.TestCase):
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers)
+                       headers=client.default_headers,
+                       stream=True)
             .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com", "Retry-After": "5"}))
             .once())
 
         thumbnail = client.get_thumbnail(123)
         self.assertIsNone(thumbnail)
 
-        # Delayed within allowed wait time
+    def test_get_client_with_retry(self):
+        client = BoxClient("my_token")
+
+
+
         (flexmock(requests)
             .should_receive('request')
             .with_args("get",
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers)
-            .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com/url_to_thumbnail", "Retry-After": "1"}))
-            .once())
-
-        (flexmock(requests)
-            .should_receive('get')
-            .with_args('http://box.com/url_to_thumbnail', headers=client.default_headers)
-            .and_return(mocked_response(StringIO("Thumbnail contents")))
-            .once())
+                       headers=client.default_headers,
+                       stream=True)
+            .and_return(mocked_response(status_code=202, headers={"Location": "http://box.com/url_to_thumbnail", "Retry-After": "1"}),
+                        mocked_response(StringIO("Thumbnail contents")))
+            .one_by_one())
 
         thumbnail = client.get_thumbnail(123, max_wait=1)
         self.assertEqual('Thumbnail contents', thumbnail.read())
+
+    def test_get_thumbnail_with_params(self):
+        client = BoxClient("my_token")
 
         # Not available
         (flexmock(requests)
@@ -365,7 +369,8 @@ class TestClient(unittest.TestCase):
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers)
+                       headers=client.default_headers,
+                       stream=True)
             .and_return(mocked_response(status_code=302))
             .once())
 
@@ -379,7 +384,8 @@ class TestClient(unittest.TestCase):
                        'https://api.box.com/2.0/files/123/thumbnail.png',
                        params={},
                        data=None,
-                       headers=client.default_headers)
+                       headers=client.default_headers,
+                       stream=True)
             .and_return(mocked_response(StringIO("Thumbnail contents")))
             .once())
 
@@ -396,7 +402,8 @@ class TestClient(unittest.TestCase):
                                "min_width": 3,
                                "max_width": 4},
                        data=None,
-                       headers=client.default_headers)
+                       headers=client.default_headers,
+                       stream=True)
             .and_return(mocked_response(StringIO("Thumbnail contents")))
             .once())
 

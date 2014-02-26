@@ -29,7 +29,7 @@ else:
 
 setup(
     name='box.py',
-    version='1.2.7',
+    version='1.2.8',
     author='Sookasa',
     author_email='dev@sookasa.com',
     url='http://github.com/sookasa/box.py',

@@ -3,6 +3,10 @@
 Release History
 ---------------
 
+1.2.8
++++++
+- Fixed get_thumbnail()
+
 1.2.7
 +++++
 - Python 2.6 support (thanks @aaylward)
