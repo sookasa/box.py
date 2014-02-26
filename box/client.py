@@ -546,7 +546,7 @@ class BoxClient(object):
                         raised.
             - fileobj: a fileobj-like object that contains the data to upload
             - parent: (optional) ID or a Dictionary (as returned by the apis) of the parent folder
-            - content_modified_at: (optional) a timestamp (datetime or a properly formatted string) of the time the
+            - content_created_at: (optional) a timestamp (datetime or a properly formatted string) of the time the
               content was created
             - content_modified_at: (optional) a timestamp (datetime or a properly formatted string) of the time the
               content was last modified
