@@ -339,6 +339,349 @@ class TestClient(unittest.TestCase):
         thumbnail = client.get_thumbnail(123)
         self.assertIsNone(thumbnail)
 
+    def test_file_get_comments(self):
+        client = BoxClient("my_token")
+
+        response = { "total_count": 0, "entries": [] }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("get",
+                       'https://api.box.com/2.0/files/123/comments',
+                       params=None,
+                       data=None,
+                       headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        comments = client.get_file_comments(123)
+        self.assertEquals(comments, response)
+
+    def test_get_comment_information(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "comment",
+                    "id": 123
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("get",
+                 "https://api.box.com/2.0/comments/123",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        comment = client.get_comment_information(123)
+        self.assertEquals(comment, response)
+
+    def test_add_comment_to_file(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "comment",
+                    "id": 123,
+                    "item": {"id": 123,
+                             "type": "file"},
+                    "message": "test"
+        }
+
+        expected_data={"item": {"type": "file",
+                                "id": 123},
+                       "message": "test"
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("post",
+                 "https://api.box.com/2.0/comments",
+                 params=None,
+                 data=json.dumps(expected_data),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        comment = client.add_comment(123, "file", "test")
+        self.assertEquals(comment, response)
+
+    def test_add_comment_to_comment(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "comment",
+                    "id": 123,
+                    "item": {"id": 123,
+                             "type": "comment"},
+                    "message": "test"
+        }
+
+        expected_data={"item": {"type": "comment",
+                                "id": 123},
+                       "message": "test"
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("post",
+                 "https://api.box.com/2.0/comments",
+                 params=None,
+                 data=json.dumps(expected_data),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        comment = client.add_comment(123, "comment", "test")
+        self.assertEquals(comment, response)
+
+    def test_change_comment(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "comment",
+                    "id": 123,
+                    "message": "new_message"
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("put",
+                 "https://api.box.com/2.0/comments/123",
+                 params=None,
+                 data=json.dumps({"message": "new_message"}),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        modified = client.change_comment(123, "new_message")
+        self.assertEquals(modified, response)
+
+    def test_delete_comment(self):
+        client = BoxClient("my_token")
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("delete",
+                 "https://api.box.com/2.0/comments/123",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(status_code=204)))
+
+        self.assertIsNone(client.delete_comment(123))
+
+    def test_file_get_tasks(self):
+        client = BoxClient("my_token")
+
+        response = { "total_count": 0, "entries": [] }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("get",
+                       'https://api.box.com/2.0/files/123/tasks',
+                       params=None,
+                       data=None,
+                       headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        tasks = client.get_file_tasks(123)
+        self.assertEquals(tasks, response)
+
+    def test_get_task_information(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "task",
+                    "id": 123
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("get",
+                 "https://api.box.com/2.0/tasks/123",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        task = client.get_task_information(123)
+        self.assertEquals(task, response)
+
+    def test_add_task(self):
+        client = BoxClient("my_token")
+        due_at = datetime.now()
+
+        expected_data = {"item": {"type": "file",
+                                  "id": 123},
+                         "action": "review",
+                         "due_at": str(due_at),
+                         "message": "test"
+        }
+
+        response = {"type": "task",
+                    "id": 123,
+                    "action": "review",
+                    "message": "test",
+                    "due_at": str(due_at)
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("post",
+                 "https://api.box.com/2.0/tasks",
+                 params=None,
+                 data=json.dumps(expected_data),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        task = client.add_task(123, due_at, message="test")
+        self.assertEquals(task, response)
+
+    def test_change_task(self):
+        client = BoxClient("my_token")
+        due_at = datetime.now()
+
+        expected_data = {"action": "review",
+                         "due_at": str(due_at),
+                         "message": "changed"
+        }
+
+        response = {"type": "task",
+                    "id": 123,
+                    "action": "review",
+                    "message": "changed",
+                    "due_at": str(due_at)
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("put",
+                 "https://api.box.com/2.0/tasks/123",
+                 params=None,
+                 data=json.dumps(expected_data),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        changed = client.change_task(123, due_at, message="changed")
+        self.assertEquals(changed, response)
+
+    def test_delete_task(self):
+        client = BoxClient("my_token")
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("delete",
+                 "https://api.box.com/2.0/tasks/123",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(status_code=204)))
+
+        self.assertIsNone(client.delete_task(123))
+
+    def test_get_task_assignments(self):
+        client = BoxClient("my_token")
+
+        response = {"total_count": 0,
+                    "entries": []
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("get",
+                 "https://api.box.com/2.0/tasks/123/assignments",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        assignments = client.get_task_assignments(123)
+        self.assertEquals(assignments, response)
+
+    def test_get_assignment_information(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "task_assignment",
+                    "id": 123
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("get",
+                 "https://api.box.com/2.0/task_assignments/123",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        assignment = client.get_assignment(123)
+        self.assertEquals(assignment, response)
+
+    def test_add_assignment(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "task_assignment",
+                    "id": 123,
+                    "assigned_to": {"type": "user",
+                                    "id": 123,
+                                    "login": "test@test.com"},
+                    "item": {"type": "task",
+                             "id": 123}
+        }
+
+        expected_data = {"task": {"id": 123,
+                                  "type": "task"},
+                         "assign_to": {"id": 123,
+                                       "login": "test@test.com"}
+        }
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("post",
+                 "https://api.box.com/2.0/task_assignments",
+                 params=None,
+                 data=json.dumps(expected_data),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        assignment = client.assign_task(123, user_id=123, login="test@test.com")
+        self.assertEquals(assignment, response)
+
+    def test_update_assignment(self):
+        client = BoxClient("my_token")
+
+        response = {"type": "task_assignment",
+                    "id": 123,
+                    "message": "All good !!!",
+                    "resolution_state": "completed",
+                    "assigned_to": {"type": "user",
+                                    "id": 123,
+                                    "login": "test@test.com"},
+                    "item": {"type": "task",
+                             "id": 123}
+        }
+
+        expected_data = {"resolution_state": "completed",
+                         "message": "All good !!!"}
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("put",
+                 "https://api.box.com/2.0/task_assignments/123",
+                 params=None,
+                 data=json.dumps(expected_data),
+                 headers=client.default_headers)
+        .and_return(mocked_response(response)))
+
+        changed = client.update_assignment(123, "completed", "All good !!!")
+        self.assertEquals(changed, response)
+
+    def test_delete_assignment(self):
+        client = BoxClient("my_token")
+
+        (flexmock(requests)
+            .should_receive('request')
+            .with_args("delete",
+                 "https://api.box.com/2.0/task_assignments/123",
+                 params=None,
+                 data=None,
+                 headers=client.default_headers)
+        .and_return(mocked_response(status_code=204)))
+
+        self.assertIsNone(client.delete_assignment(123))
+
     def test_get_client_with_retry(self):
         client = BoxClient("my_token")
 

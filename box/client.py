@@ -112,7 +112,7 @@ def start_authenticate_v2(client_id, state=None, redirect_uri=None):
     args = {
         'response_type': 'code',
         'client_id': client_id,
-        }
+    }
 
     if state:
         args['state'] = state
@@ -350,7 +350,7 @@ class BoxClient(object):
         params = {
             'limit': limit,
             'offset': offset,
-            }
+        }
 
         return self._request("get", 'users/', params).json()
 
@@ -368,7 +368,7 @@ class BoxClient(object):
         params = {
             'limit': limit,
             'offset': offset,
-            }
+        }
 
         if fields:
             params['fields'] = fields
@@ -389,7 +389,7 @@ class BoxClient(object):
         params = {
             'limit': limit,
             'offset': offset,
-            }
+        }
 
         if fields:
             params['fields'] = fields
