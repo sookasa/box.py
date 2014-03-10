@@ -204,7 +204,6 @@ class TestClient(unittest.TestCase):
         result = client.get_user_list(limit=123, offset=456)
         self.assertEqual({'a': 'b'}, result)
 
-
     def test_get_folder(self):
         client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456}, result={'a': 'b'})
         result = client.get_folder(folder_id=666, limit=123, offset=456)
@@ -250,6 +249,10 @@ class TestClient(unittest.TestCase):
             .once())
 
         self.assertListEqual(list(client.get_folder_iterator(666)), [])
+
+    def test_get_folder_collaborations(self):
+        client = self.make_client("get", 'folders/123/collaborations', result={'a': 'b'})
+        self.assertEqual({'a': 'b'}, client.get_folder_collaborations(123))
 
     def test_create_folder_no_parent(self):
         expected_dict = {
@@ -771,6 +774,56 @@ class TestClient(unittest.TestCase):
         client = self.make_client("get", "search", params={'query': "foobar", 'limit': 123, 'offset': 456}, result=expected_result)
         result = client.search("foobar", limit=123, offset=456)
         self.assertEqual(result, expected_result)
+
+    def test_get_collaboration(self):
+        client = self.make_client("get", 'collaborations/123', result={'a': 'b'})
+        self.assertEqual({'a': 'b'}, client.get_collaboration(123))
+
+    def test_create_collaboration_by_user_id(self):
+        params = {
+            'notify': False,
+        }
+        data = {
+            'item': {'id': 123, 'type': 'folder'},
+            'accessible_by': {'id': 123, 'type': 'user'},
+            'role': 'viewer',
+        }
+        expected_result = {'entries': None}
+        client = self.make_client("post", "collaborations", params, data=data, result=expected_result)
+        result = client.create_collaboration_by_user_id(123, 123)
+        self.assertEqual(result, expected_result)
+
+    def test_create_collaboration_by_login(self):
+        params = {
+            'notify': False,
+        }
+        data = {
+            'item': {'id': 123, 'type': 'folder'},
+            'accessible_by': {'login': 'sean@box.com', 'type': 'user'},
+            'role': 'viewer',
+        }
+        expected_result = {'entries': None}
+        client = self.make_client("post", "collaborations", params, data=data, result=expected_result)
+        result = client.create_collaboration_by_login(123, 'sean@box.com')
+        self.assertEqual(result, expected_result)
+
+    def test_edit_collaboration(self):
+        data = {
+            'role': 'viewer',
+        }
+        expected_result = {'entries': None}
+        client = self.make_client('put', 'collaborations/123', data=data, result=expected_result)
+        result = client.edit_collaboration(123)
+        self.assertEqual(result, expected_result)
+
+    def test_delete_collaboration(self):
+        client = self.make_client("delete", 'collaborations/123')
+        result = client.delete_collaboration(123)
+        self.assertIsNone(result)
+
+        client = self.make_client("delete", 'collaborations/123', headers={'If-Match': 'deadbeef'})
+        result = client.delete_collaboration(123, etag='deadbeef')
+        self.assertIsNone(result)
 
 
 if __name__ == '__main__':
