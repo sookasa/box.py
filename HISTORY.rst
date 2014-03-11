@@ -3,7 +3,7 @@
 Release History
 ---------------
 
-1.2.9
+1.3.0
 +++++
 - Added collaboration (thanks @samkuehn)
 - Added file comments & assignments (thanks @tsanch3z)
