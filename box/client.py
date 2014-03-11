@@ -456,6 +456,24 @@ class BoxClient(object):
         """
         return self._request("get", 'files/{0}'.format(file_id)).json()
 
+    def get_file_comments(self, file_id):
+        """ Retrieves a file's associated comments
+
+        Args:
+            - file_id: the file id
+        Returns a list of mini formatted comments
+        """
+        return self._request('get', 'files/{0}/comments'.format(file_id)).json()
+
+    def get_file_tasks(self, file_id):
+        """ Retrieves a file's associated tasks
+
+        Args:
+            - file_id: the file id
+        Returns a list of mini formatted tasks
+        """
+        return self._request('get', 'files/{0}/tasks'.format(file_id)).json()
+
     def delete_file(self, file_id, etag=None):
         """
         Discards a file to the trash.
@@ -759,6 +777,180 @@ class BoxClient(object):
         path_parts.append(file_metadata['name'])
         return '/' + '/'.join(path_parts)
 
+    def get_comment_information(self, comment_id):
+        """ Retrieves information about a comment
+
+        Args:
+            - comment_id: the comment id
+        Returns a full comment object
+        """
+        return self._request('get', 'comments/{0}'.format(comment_id)).json()
+
+    def add_comment(self, id, type, message):
+        """ Add a comment to the given file or comment
+
+        Args:
+            - id: the id of the object to comment
+            - type: the type of the object to comment, can be "file" or "comment"
+            - message: the comment's message
+
+        Returns the newly created comment full object
+        """
+
+        item = {"type": type, "id": id}
+
+        data = {'item' : item, 'message' : message}
+        return self._request('post', 'comments', data=data).json()
+
+    def change_comment(self, comment_id, message):
+        """ Change a comment's message
+
+        Args:
+            - comment_id: the comment's to change id
+            - message: the new message
+
+        Returns the modified comment full object
+        """
+        data = {'message' : message}
+        return self._request('put', 'comments/{0}'.format(comment_id), data=data  ).json()
+
+    def delete_comment(self, comment_id):
+        """ Delete a given comment from box
+
+        Args:
+            - comment_id: the comment id
+
+        """
+        self._request('delete', 'comments/{0}'.format(comment_id))
+
+    def get_task_information(self, task_id):
+        """ Retrieves information about a task
+
+        Args:
+            - task_id: the task id
+        Returns a full task object
+        """
+        return self._request('get', 'tasks/{0}'.format(task_id)).json()
+
+    def add_task(self, file_id, due_at, action='review', message=None):
+        """ Add a task to the given file
+
+        Args:
+            - file_id: the file to add a task to
+            - due_at: a datetime object containing the due date
+            - (optional) message: the task's message
+            - (optional) action: currently only support 'review'
+
+        Returns the newly created task full object
+        """
+
+        item = {"type": "file", "id": file_id}
+        data = {'item' : item,
+                'action' : action,
+                'due_at' : str(due_at),
+                'message' : message
+        }
+        return self._request('post', 'tasks', data=data).json()
+
+    def change_task(self, task_id, due_at, action='review', message=None):
+        """ Change a task
+
+        Args:
+            - task_id: the task's to change id
+            - due_at: a datetime for the day the task is due
+            - (optional) message: the new task's message
+            - (optional) action: currently only support 'review'
+
+        Returns the modified task full object
+        """
+
+        data = {'action' : action,
+                'due_at' : str(due_at),
+                }
+        if message:
+            data['message'] = message
+
+        return self._request('put', 'tasks/{0}'.format(task_id), data=data).json()
+
+    def delete_task(self, task_id):
+        """ Delete a given task from box
+
+        Args:
+            - task_id: the comment id
+
+        """
+        self._request('delete', 'tasks/{0}'.format(task_id))
+
+    def get_task_assignments(self, task_id):
+        """ Retrieves assignments for a given task
+
+        Args:
+            - task_id: the task id
+
+        Returns the list of the task assignments (mini formatted)
+        """
+        return self._request('get', 'tasks/{0}/assignments'.format(task_id)).json()
+
+    def get_assignment(self, assignment_id):
+        """ Retrieves a given assignment information
+
+        Args
+            - assignment_id: the assignment id
+
+        Returns an assignment full object
+        """
+
+        return self._request('get', 'task_assignments/{0}'.format(assignment_id)).json()
+
+    def assign_task(self, task_id, user_id=None, login=None):
+        """ Assign the given task to a user
+
+        Args:
+            - task_id: the task id
+            - id: (optional) the id of the user to assign the task to
+            - login: (optional) the login of the user to assign the task to
+            At least the id or login field is to be set to identify the user
+
+        Returns a full task assignment object
+        """
+        task = { "id": task_id, "type": "task" }
+        assign_to = dict()
+        if user_id:
+            assign_to['id'] = user_id
+        if login:
+            assign_to['login'] = login
+
+        data = {'task' : task, 'assign_to' : assign_to}
+
+        return self._request('post', 'task_assignments', data=data).json()
+
+    def update_assignment(self, assignment_id, resolution_state, message=None):
+        """ Update a task assignment state
+
+        Args:
+          - assignment_id: the assignment to update id
+          - message: (optional) A message about the state change
+          - resolution_state: can be "completed", "incomplete", "approved" or "rejected"
+
+        Returns the modified task assignment object
+        """
+
+        data = {'resolution_state' : resolution_state}
+
+        if message:
+            data['message'] = message
+
+        return self._request('put', 'task_assignments/{0}'.format(assignment_id), data=data).json()
+
+    def delete_assignment(self, assignment_id):
+        """ Delete the given assignment
+
+        Args
+            - assignment_id: the assignment id
+        """
+
+        self._request('delete', 'task_assignments/{0}'.format(assignment_id))
+
     def search(self, query, limit=30, offset=0):
         """
         The search endpoint provides a simple way of finding items that are accessible in a given user's Box account.
@@ -774,7 +966,7 @@ class BoxClient(object):
             'query': query,
             'limit': limit,
             'offset': offset,
-        }
+            }
 
         return self._request("get", 'search', params).json()
 
