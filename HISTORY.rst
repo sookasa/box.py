@@ -3,6 +3,11 @@
 Release History
 ---------------
 
+1.2.9
++++++
+- Added collaboration (thanks @samkuehn)
+- Added file comments & assignments (thanks @tsanch3z)
+
 1.2.8
 +++++
 - Fixed get_thumbnail()
