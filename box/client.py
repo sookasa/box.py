@@ -30,6 +30,16 @@ class EventType(object):
     ITEM_TRASH = 'ITEM_TRASH'
 
 
+class CollaboratorRole(object):
+    EDITOR = 'editor'
+    VIEWER = 'viewer'
+    PREVIEWER = 'previewer'
+    UPLOADER = 'uploader'
+    PREVIEWER_UPLOADER = 'previewer-uploader'
+    VIEWER_UPLOADER = 'viewer-uploader'
+    CO_OWNER = 'co-owner'
+
+
 class ShareAccess(object):
     OPEN = 'open'
     COMPANY = 'company'
@@ -424,6 +434,17 @@ class BoxClient(object):
 
         return self._request("post", 'folders', data=data).json()
 
+    def get_folder_collaborations(self, folder_id):
+        """
+        Fetches the collaborations of the given folder_id
+
+        Args:
+            - folder_id: the folder id.
+
+        Returns a list with all folder collaborations.
+        """
+        return self._request("get", 'folders/{0}/collaborations'.format(folder_id)).json()
+
     def get_file_metadata(self, file_id):
         """
         Fetches the metadata of the given file_id
@@ -756,6 +777,97 @@ class BoxClient(object):
         }
 
         return self._request("get", 'search', params).json()
+
+    def get_collaboration(self, collaboration_id):
+        """
+        Fetches the collaboration of the given collaboration_id
+
+        Args:
+            - collaboration_id: the collaboration id.
+
+        Returns a dictionary with all of the collaboration data.
+        """
+        return self._request("get", 'collaborations/{0}'.format(collaboration_id)).json()
+
+    def create_collaboration_by_user_id(self, folder_id, user_id, role=CollaboratorRole.VIEWER, notify=False):
+        """
+        Create a collaboration of the given folder_id and user_id
+
+        Args:
+            - folder_id: the folder id.
+            - user_id: the user id.
+            - role: (optional) access level of this collaboration from ``CollaboratorRole``. (default=CollaboratorRole.VIEWER)
+            - notify: (optional) determines if the user should receive email notification of the collaboration. ``CollaboratorRole``. (default=False)
+
+        Returns a dictionary with all of the collaboration data.
+        """
+        params = {
+            'notify': notify,
+        }
+        data = {
+            'item': {'id': folder_id, 'type': 'folder'},
+            'accessible_by': {'id': user_id, 'type': 'user'},
+            'role': role,
+        }
+        return self._request('post', 'collaborations', params, data=data).json()
+
+    def create_collaboration_by_login(self, folder_id, login, role=CollaboratorRole.VIEWER, notify=False):
+        """
+        Create a collaboration of the given folder_id and login (login does not need to be a Box user)
+
+        Args:
+            - folder_id: the folder id.
+            - login: the user login (does not need to be a Box user).
+            - role: (optional) access level of this collaboration from ``CollaboratorRole``. (default=CollaboratorRole.VIEWER)
+            - notify: (optional) determines if the user should receive email notification of the collaboration. ``CollaboratorRole``. (default=False)
+
+        Returns a dictionary with all of the collaboration data.
+        """
+        params = {
+            'notify': notify,
+        }
+        data = {
+            'item': {'id': folder_id, 'type': 'folder'},
+            'accessible_by': {'login': login, 'type': 'user'},
+            'role': role,
+        }
+        return self._request('post', 'collaborations', params, data=data).json()
+
+    def edit_collaboration(self, collaboration_id, role=CollaboratorRole.VIEWER, etag=None):
+        """
+        Edit an existing collaboration.
+
+        Args:
+            - collaboration_id: collaboration id to be edited
+            - role: (optional) access level of this collaboration from ``CollaboratorRole``. (default=CollaboratorRole.VIEWER)
+            - etag: (optional) If specified, the file will only be deleted if
+                    its etag matches the parameter
+        """
+
+        headers = {}
+        if etag:
+            headers['If-Match'] = etag
+
+        data = {
+            'role': role,
+        }
+        return self._request('put', 'collaborations/{0}'.format(collaboration_id), headers=headers, data=data).json()
+
+    def delete_collaboration(self, collaboration_id, etag=None):
+        """
+        Deletes a collaboration.
+
+        Args:
+            - collaboration_id: collaboration id to be deleted
+            - etag: (optional) If specified, the file will only be deleted if
+                    its etag matches the parameter
+        """
+
+        headers = {}
+        if etag:
+            headers['If-Match'] = etag
+
+        self._request("delete", 'collaborations/{0}'.format(collaboration_id), headers=headers)
 
 
 class BoxClientException(Exception):

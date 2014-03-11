@@ -24,7 +24,7 @@ Supported features
 - Thumbnails
 - Search
 - Events + longpoll
-
+- Collaborations
 
 Support
 -------
