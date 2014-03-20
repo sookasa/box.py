@@ -228,16 +228,43 @@ class TestClient(unittest.TestCase):
         (flexmock(client)
             .should_receive('get_folder_content')
             .with_args(666, limit=1000)
-            .and_return({'entries': range(10)})
+            .and_return({'entries': range(10), 'total_count': 10})
+            .once())
+
+        self.assertSequenceEqual(list(client.get_folder_iterator(666)), range(10))
+
+    def test_get_folder_iterator_boundary_1(self):
+        # setup a regular client without expecting the usual calls
+        client = BoxClient('my_token')
+        (flexmock(client)
+            .should_receive('get_folder_content')
+            .with_args(666, limit=1000)
+            .and_return({'entries': range(1000), 'total_count': 1001})
             .once())
 
         (flexmock(client)
             .should_receive('get_folder_content')
             .with_args(666, limit=1000, offset=1000)
-            .and_return({'entries': None})
+            .and_return({'entries': [1000], 'total_count': 1001})
             .once())
 
-        self.assertListEqual(list(client.get_folder_iterator(666)), list(range(10)))
+        self.assertSequenceEqual(list(client.get_folder_iterator(666)), range(1001))
+
+    def test_get_folder_iterator_boundary_2(self):
+        # setup a regular client without expecting the usual calls
+        client = BoxClient('my_token')
+        (flexmock(client)
+            .should_receive('get_folder_content')
+            .with_args(666, limit=1000)
+            .and_return({'entries': range(1000), 'total_count': 1000})
+            .once())
+
+        (flexmock(client)
+            .should_receive('get_folder_content')
+            .with_args(666, limit=1000, offset=1000)
+            .never())
+
+        self.assertSequenceEqual(list(client.get_folder_iterator(666)), range(1000))
 
     def test_get_folder_iterator_zero_content(self):
         # setup a regular client without expecting the usual calls
