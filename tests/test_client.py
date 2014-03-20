@@ -254,6 +254,15 @@ class TestClient(unittest.TestCase):
         client = self.make_client("get", 'folders/123/collaborations', result={'a': 'b'})
         self.assertEqual({'a': 'b'}, client.get_folder_collaborations(123))
 
+    def test_copy_folder(self):
+        client = self.make_client("post", 'folders/123/copy', data={'parent': {'id': '666'}}, result={'id': '1'})
+        result = client.copy_folder(123, 666)
+        self.assertEqual({'id': '1'}, result)
+
+        client = self.make_client("post", 'folders/123/copy', data={'parent': {'id': '666'}, 'name': 'goatse.cx'}, result={'id': '1'})
+        result = client.copy_folder(123, 666, 'goatse.cx')
+        self.assertEqual({'id': '1'}, result)
+
     def test_create_folder_no_parent(self):
         expected_dict = {
             'name': 'hello',

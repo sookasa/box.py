@@ -72,6 +72,15 @@ metadata = client.copy_file('123456', new_filename='goodbye.txt')
 ```
 
 
+Copying a folder
+--------------
+```python
+metadata = client.copy_folder('361015', destination_parent='510163', new_foldername='goodbye')
+>>> metadata['id']
+'149148'
+```
+
+
 Receiving & waiting for events
 ------------------------------
 ```python
@@ -88,7 +97,7 @@ url = start_authenticate_v2('my_api_key')
 'https://www.box.com/api/oauth2/authorize?response_type=code&client_id=my_api_key'
 ```
 
-Next, redirect the user to url.  
+Next, redirect the user to url.
 Once he accepts, a redirect will be issued to the page defined in your developer settings. The "code" is passed as a GET argument.
 
 ```python
@@ -107,8 +116,8 @@ client = BoxClient(response['access_token'])
 ```
 
 ### Token refresh
-The v2 security API introduces a mandatory token refresh mechanism (according to Box, this was done to mitigate the impact of token theft).  
-Essentially, every so often, the token needs to be "refreshed", which involves hitting a Box endpoint with a special "refresh token", which returns new access  & refresh tokens that replace the old ones.  
+The v2 security API introduces a mandatory token refresh mechanism (according to Box, this was done to mitigate the impact of token theft).
+Essentially, every so often, the token needs to be "refreshed", which involves hitting a Box endpoint with a special "refresh token", which returns new access  & refresh tokens that replace the old ones.
 For more details, see here: http://developers.box.com/oauth/
 
 

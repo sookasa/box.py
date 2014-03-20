@@ -422,6 +422,33 @@ class BoxClient(object):
             offset += batch_size
             content = self.get_folder_content(folder_id, limit=batch_size, offset=offset)
 
+    def copy_folder(self, folder_id, destination_parent, new_foldername=None):
+        """
+        Copies a given `folder_id` into a new location, `destination_parent`. By default
+        the original name of the folder is used unless `new_foldername` is provided.
+
+        @see https://developers.box.com/docs/#folders-copy-a-folder
+
+        Args:
+            - file_id: the id of the file we want to copy
+            - destination_parent: ID or a dictionary (as returned by the apis) of the target folder
+            - new_foldername: (optional) name the copy `new_foldername`, if provided.
+
+        Returns:
+            - a dictionary containing the metadata of newly created copy
+        """
+
+        data = {
+          'parent': {
+            'id': self._get_id(destination_parent)
+          }
+        }
+
+        if new_foldername:
+            data.update({'name': new_foldername})
+
+        return self._request('post', 'folders/{0}/copy'.format(folder_id), data=data).json()
+
     def create_folder(self, name, parent=0):
         """
         creates a new folder under the parent.
