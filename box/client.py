@@ -381,7 +381,7 @@ class BoxClient(object):
         }
 
         if fields:
-            params['fields'] = fields
+            params['fields'] = ','.join(fields)
 
         return self._request("get", 'folders/{0}'.format(folder_id), params=params).json()
 
@@ -402,7 +402,7 @@ class BoxClient(object):
         }
 
         if fields:
-            params['fields'] = fields
+            params['fields'] = ','.join(fields)
 
         return self._request("get", 'folders/{0}/items'.format(folder_id), params=params).json()
 
