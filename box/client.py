@@ -439,9 +439,9 @@ class BoxClient(object):
         """
 
         data = {
-          'parent': {
+            'parent': {
             'id': self._get_id(destination_parent)
-          }
+            }
         }
 
         if new_foldername:
@@ -826,7 +826,7 @@ class BoxClient(object):
 
         item = {"type": type, "id": id}
 
-        data = {'item' : item, 'message' : message}
+        data = {'item': item, 'message': message}
         return self._request('post', 'comments', data=data).json()
 
     def change_comment(self, comment_id, message):
@@ -838,8 +838,8 @@ class BoxClient(object):
 
         Returns the modified comment full object
         """
-        data = {'message' : message}
-        return self._request('put', 'comments/{0}'.format(comment_id), data=data  ).json()
+        data = {'message': message}
+        return self._request('put', 'comments/{0}'.format(comment_id), data=data).json()
 
     def delete_comment(self, comment_id):
         """ Delete a given comment from box
@@ -872,10 +872,11 @@ class BoxClient(object):
         """
 
         item = {"type": "file", "id": file_id}
-        data = {'item' : item,
-                'action' : action,
-                'due_at' : str(due_at),
-                'message' : message
+        data = {
+            'item': item,
+            'action': action,
+            'due_at': str(due_at),
+            'message': message,
         }
         return self._request('post', 'tasks', data=data).json()
 
@@ -891,9 +892,10 @@ class BoxClient(object):
         Returns the modified task full object
         """
 
-        data = {'action' : action,
-                'due_at' : str(due_at),
-                }
+        data = {
+            'action': action,
+            'due_at': str(due_at),
+        }
         if message:
             data['message'] = message
 
@@ -940,14 +942,14 @@ class BoxClient(object):
 
         Returns a full task assignment object
         """
-        task = { "id": task_id, "type": "task" }
+        task = {"id": task_id, "type": "task"}
         assign_to = dict()
         if user_id:
             assign_to['id'] = user_id
         if login:
             assign_to['login'] = login
 
-        data = {'task' : task, 'assign_to' : assign_to}
+        data = {'task': task, 'assign_to': assign_to}
 
         return self._request('post', 'task_assignments', data=data).json()
 
@@ -962,7 +964,7 @@ class BoxClient(object):
         Returns the modified task assignment object
         """
 
-        data = {'resolution_state' : resolution_state}
+        data = {'resolution_state': resolution_state}
 
         if message:
             data['message'] = message
@@ -993,7 +995,7 @@ class BoxClient(object):
             'query': query,
             'limit': limit,
             'offset': offset,
-            }
+        }
 
         return self._request("get", 'search', params).json()
 
