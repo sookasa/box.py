@@ -8,6 +8,7 @@ Release History
 - Added collaboration (thanks @samkuehn)
 - Added file comments & assignments (thanks @tsanch3z)
 - Added folder copying (thanks @emiller)
+- Fixed fields (thanks @samkuehn)
 
 1.2.8
 +++++
