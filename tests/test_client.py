@@ -209,8 +209,8 @@ class TestClient(unittest.TestCase):
         result = client.get_folder(folder_id=666, limit=123, offset=456)
         self.assertEqual({'a': 'b'}, result)
 
-        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456, 'fields': ['hello']}, result={'a': 'b'})
-        result = client.get_folder(folder_id=666, limit=123, offset=456, fields=['hello'])
+        client = self.make_client("get", 'folders/666', params={'limit': 123, 'offset': 456, 'fields': 'hello,goodbye'}, result={'a': 'b'})
+        result = client.get_folder(folder_id=666, limit=123, offset=456, fields=['hello', 'goodbye'])
         self.assertEqual({'a': 'b'}, result)
 
     def test_get_folder_content(self):
@@ -218,7 +218,7 @@ class TestClient(unittest.TestCase):
         result = client.get_folder_content(folder_id=666, limit=123, offset=456)
         self.assertEqual({'a': 'b'}, result)
 
-        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456, 'fields': ['hello']}, result={'a': 'b'})
+        client = self.make_client("get", 'folders/666/items', params={'limit': 123, 'offset': 456, 'fields': 'hello'}, result={'a': 'b'})
         result = client.get_folder_content(folder_id=666, limit=123, offset=456, fields=['hello'])
         self.assertEqual({'a': 'b'}, result)
 
