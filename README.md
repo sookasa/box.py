@@ -1,3 +1,12 @@
+⚠⚠⚠ WARNING WARNING WARNING ⚠⚠⚠
+--------------------------------
+This library is not under active development.
+After spending 3 months trying to get support from Box, I finally gave up.
+
+If anyone is interested in taking over development, please contact me on Github.
+
+
+
 box.py - Python client for Box
 ------------------------------
 
