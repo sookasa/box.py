@@ -3,7 +3,7 @@
 This library is not under active development.
 After spending 3 months trying to get support from Box, I finally gave up.
 
-If anyone is interested in taking over development, please contact me on Github.
+If anyone is interested in taking over development, please contact me [on Twitter](https://twitter.com/eiopa).
 
 
 
